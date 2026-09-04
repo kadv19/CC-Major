@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Medication Reminder System for Elderly/Low-Literacy Patients - Offline Flask + SQLite + Web Speech API (Kannada/Hindi/English)">
+    <meta name="theme-color" content="#4CAF50">
+    <title>💊 Medication Reminder - Elderly Care</title>
+    <!-- Favicon - offline: data URI pill + file fallback -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💊</text></svg>">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Main stylesheet - single source (Flask) - no duplicate to avoid 404 console errors -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Kannada + Hindi font support via Google Fonts (offline fallback to system Noto) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <a href="#mainContainer" class="skip-link">Skip to main content</a>
+    <!-- Loading Overlay - Phase 8: shown during API calls -->
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;" aria-live="polite" aria-label="Loading">
+        <div class="spinner large" aria-hidden="true"></div>
+        <p>Loading...</p>
+    </div>
+    <!-- Offline Indicator - Phase 8 -->
+    <div id="offlineIndicator" class="offline-indicator" style="display:none;" role="alert" aria-live="assertive">📡 Offline - using local cache</div>
+    <!-- Main container - mobile-first responsive wrapper -->
+    <div class="container" id="mainContainer">
+        <!-- ==================== 1. HEADER - Phase 8 polished with demo, dark mode, offline ==================== -->
+        <header class="header" role="banner">
+            <div class="header-left">
+                <h1 class="header-title">💊 Medication Reminder</h1>
+                <p class="header-subtitle">Elderly Care • Offline • IoT Simulation • Flask + SQLite • Phase 8 Polish</p>
+                <div class="header-actions" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                    <span id="offlineBadge" class="badge badge-success" aria-live="polite">● Online</span>
+                    <span id="apiStatusBadge" class="badge badge-info" aria-live="polite">API: Checking...</span>
+                    <span id="phaseBadge" class="badge badge-warning">Phase 8 • Demo Ready</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" id="darkModeToggle" class="btn btn-outline btn-sm" aria-label="Toggle dark mode" title="Toggle dark mode">🌙 Dark</button>
+                    <button type="button" id="demoHelpBtn" class="btn btn-outline btn-sm" aria-label="Show demo instructions" title="Demo instructions">❓ Demo Help</button>
+                </div>
+                <label for="languageSelect" class="lang-label">🌐 Language</label>
+                <select id="languageSelect" class="language-select" aria-label="Select reminder language">
+                    <option value="en-US">🇬🇧 English (en-US)</option>
+                    <option value="hi-IN">🇮🇳 हिन्दी (hi-IN)</option>
+                    <option value="kn-IN">🇮🇳 ಕನ್ನಡ (kn-IN)</option>
+                </select>
+                <span class="header-badge">Chrome Optimized • Web Speech API • SQLite • No API Key</span>
+            </div>
+        </header>
+
+        <!-- ==================== DEMO MODE - Phase 8 ==================== -->
+        <section id="demoMode" class="card demo-card" aria-labelledby="demoTitle">
+            <div class="card-header">
+                <h2 id="demoTitle">🚀 Demo Mode - One Click Ready</h2>
+                <span class="badge badge-success">3-5 Min Demo</span>
+            </div>
+            <p class="card-desc">Pre-populated medicines in all 3 languages (Kannada, Hindi, English) • Click <strong>Load Demo Data</strong> for instant demo. Speaker works offline in Chrome. Uses <code>/api/demo/load</code> + <code>/api/demo/reset</code>.</p>
+            <div class="demo-actions">
+                <button type="button" id="loadDemoBtn" class="btn btn-primary" aria-label="Load demo medicines" title="Load 3 demo medicines (API demo/load)">🚀 Load Demo Data (3 meds)</button>
+                <button type="button" id="resetDemoBtn" class="btn btn-outline" aria-label="Reset demo data" title="Clear all medicines and uploads via API demo/reset">🔄 Reset Demo</button>
+                <button type="button" id="autoDemoBtn" class="btn btn-warning" aria-label="Auto play demo" title="Auto-play demo flow with speaker and highlight">▶️ Auto Demo Flow</button>
+            </div>
+            <div class="demo-stats" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:0.80rem; color:var(--gray-700);">
+                <span>💊 Metformin (en-US) 08:00 & 20:00</span>
+                <span>•</span>
+                <span>💊 Dolo 650 (kn-IN) 14:00</span>
+                <span>•</span>
+                <span>💊 Vitamin D3 (hi-IN) 09:00</span>
+            </div>
+            <small style="color:var(--gray-500);">Demo uses backend SQLite (persistent) with localStorage fallback • Offline ready • Try <code>loadSampleMedicines()</code> in console</small>
+        </section>
+
+        <!-- Dashboard grid - responsive 1 col mobile, 2 col desktop -->
+        <div class="dashboard-grid">
+
+            <!-- ==================== 2. UPLOAD SECTION (Prescription) - Phase 6 Enhanced ==================== -->
+            <section id="uploadSection" class="card" aria-labelledby="uploadTitle">
+                <div class="card-header">
+                    <h2 id="uploadTitle">📄 Prescription Upload</h2>
+                    <span class="badge badge-info">Mock OCR • Phase 6</span>
+                </div>
+                <p class="card-desc">Upload prescription image (JPG/PNG). Drag & drop or click to browse. Mock OCR extracts medicines offline via keyword matching. No cloud.</p>
+                <!-- Drag & drop area with visual feedback -->
+                <div class="upload-dropzone" id="dropZone" role="button" tabindex="0" aria-label="Upload prescription drop zone, click or drag image here">
+                    <div class="upload-icon" aria-hidden="true">📤</div>
+                    <p class="upload-text"><strong>Drag & drop</strong> prescription here</p>
+                    <p class="upload-subtext">or click to browse</p>
+                    <input type="file" id="prescriptionFile" accept="image/jpeg,image/png,image/jpg" hidden aria-label="Prescription file input">
+                    <button type="button" class="btn btn-outline" id="browseBtn" aria-label="Browse prescription files">Browse Files</button>
+                    <p class="upload-hint">Supports: JPG, PNG • Max 5MB • Offline • Mock OCR</p>
+                </div>
+                <!-- Preview with thumbnail -->
+                <div class="upload-preview" id="uploadPreview" style="display:none;">
+                    <img src="" alt="Prescription preview" id="previewImage" loading="lazy">
+                    <div class="preview-info">
+                        <p id="previewName" style="font-weight:600;"></p>
+                        <p id="previewSize" style="font-size:0.75rem;color:var(--gray-500);"></p>
+                    </div>
+                    <div class="upload-actions" id="uploadActions" style="display:none; margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+                        <button type="button" class="btn btn-primary btn-sm" id="analyzeBtn" aria-label="Analyze prescription with mock OCR">🔍 Analyze Prescription (Mock OCR)</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="clearUploadBtn" aria-label="Clear upload">🗑️ Clear</button>
+                    </div>
+                </div>
+                <!-- OCR Processing animation -->
+                <div id="ocrProcessing" class="ocr-processing" style="display:none;" aria-live="polite">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <p><strong>Analyzing prescription...</strong></p>
+                    <p class="ocr-sub">Mock OCR • Keyword matching • Offline</p>
+                    <small>Simulating extraction of 1-3 medicines</small>
+                </div>
+                <!-- OCR Results - extracted medicines -->
+                <div id="ocrResults" class="ocr-results" style="display:none;" aria-live="polite">
+                    <h4 style="font-size:1rem; margin-bottom:8px;">📋 Extracted Medicines (Mock OCR)</h4>
+                    <p class="card-desc" style="margin-bottom:8px;">Review and edit before adding. Simulated extraction — 1-3 medicines with dosage/time/language.</p>
+                    <div id="extractedList" class="extracted-list" role="list"></div>
+                    <div class="ocr-results-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                        <button type="button" class="btn btn-success btn-sm" id="addExtractedBtn" aria-label="Add all extracted medicines">➕ Add All to Schedule</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="editExtractedBtn" aria-label="Edit first extracted in form">✏️ Edit First in Form</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="discardOcrBtn" aria-label="Discard OCR results">✕ Discard</button>
+                    </div>
+                </div>
+                <!-- Upload History - persisted via backend SQLite -->
+                <div id="uploadHistory" class="upload-history" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--gray-100);">
+                    <h4 style="font-size:0.95rem; margin-bottom:8px;">📚 Upload History</h4>
+                    <div id="uploadHistoryList" class="upload-history-list" aria-live="polite">
+                        <p class="empty-history" style="color:var(--gray-500); font-size:0.85rem; text-align:center; padding:8px;">No uploads yet — history saved in SQLite (backend) + localStorage fallback</p>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" id="clearHistoryBtn" style="margin-top:8px;" aria-label="Clear upload history">Clear History</button>
+                </div>
+            </section>
+
+            <!-- ==================== 4. MEDICINE FORM (Add New Medicine) ==================== -->
+            <section id="addMedicineForm" class="card" aria-labelledby="formTitle">
+                <div class="card-header">
+                    <h2 id="formTitle">➕ Add Medicine Schedule</h2>
+                    <span class="badge badge-success">Offline • No API Key</span>
+                </div>
+                <p class="card-desc">Set medicine name, dosage and time. Supports multiple times per day.</p>
+                <!-- Medicine form - handled by JavaScript in Phase 2 -->
+                <form id="medicineForm" class="medicine-form" onsubmit="return false;" aria-label="Add medicine form" novalidate>
+                    <div class="form-group">
+                        <label for="medicineName">Medicine Name *</label>
+                        <input type="text" id="medicineName" placeholder="e.g., Metformin / ಮೆಟ್ಫಾರ್ಮಿನ್ / मेटफॉर्मिन" required aria-required="true" autocomplete="off">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="medicineDosage">Dosage *</label>
+                            <input type="text" id="medicineDosage" placeholder="e.g., 1 tablet, 5 ml" required aria-required="true" autocomplete="off">
+                            <small>Example: 1 tablet, 2 capsules, 5 ml</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="medicineTime">Time *</label>
+                            <input type="time" id="medicineTime" value="08:00" required aria-required="true">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="medicineLanguage">Reminder Language</label>
+                            <select id="medicineLanguage" aria-label="Reminder language">
+                                <option value="en-US">English (en-US)</option>
+                                <option value="hi-IN">हिन्दी (hi-IN)</option>
+                                <option value="kn-IN">ಕನ್ನಡ (kn-IN)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="medicineTimes">Additional Times</label>
+                            <input type="text" id="medicineTimes" placeholder="e.g., 14:00, 20:00 (comma separated)" autocomplete="off" aria-label="Additional times comma separated">
+                            <small>Optional: Add more times</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="addMedicineBtn" aria-label="Add medicine to schedule">➕ Add Medicine</button>
+                    <p class="form-note">Data saved to SQLite (Flask backend) with localStorage fallback • Persists after refresh • Offline ready</p>
+                </form>
+            </section>
+        </div>
+
+        <!-- ==================== 3. SCHEDULE SECTION (Today's Doses) ==================== -->
+        <section id="scheduleDisplay" class="card" aria-labelledby="scheduleTitle">
+            <div class="card-header">
+                <h2 id="scheduleTitle">📅 Today's Schedule</h2>
+                <div class="schedule-meta">
+                    <span id="todayDate" class="badge badge-info">Today • Sep 3, 2026</span>
+                    <span id="doseCount" class="badge badge-warning">0 Doses</span>
+                    <span id="currentTimeDisplay" class="badge badge-info" aria-live="polite">🕐 --:--</span>
+                </div>
+            </div>
+            <p class="card-desc">Track <strong>Pending / Taken / Missed</strong> status. Colors: <span class="text-yellow">● Pending</span> | <span class="text-green">● Taken</span> | <span class="text-red">● Missed</span></p>
+            
+            <!-- Next Dose Display - Phase 3 -->
+            <div id="nextDoseDisplay" class="next-dose-display" aria-live="polite">
+                <span class="next-dose-label">⏰ Next dose:</span>
+                <span id="nextDoseText">No doses scheduled</span>
+                <span id="nextDoseRelative" class="relative-time"></span>
+            </div>
+
+            <!-- Filter Buttons - Phase 3 -->
+            <div class="schedule-filters" id="scheduleFilters" role="group" aria-label="Schedule filters">
+                <button class="filter-btn active" data-filter="today" aria-pressed="true">📅 Today</button>
+                <button class="filter-btn" data-filter="all" aria-pressed="false">📋 All</button>
+                <button class="filter-btn" data-filter="pending" aria-pressed="false">⏳ Pending</button>
+                <button class="filter-btn" data-filter="taken" aria-pressed="false">✅ Taken</button>
+                <button class="filter-btn" data-filter="missed" aria-pressed="false">❌ Missed</button>
+            </div>
+
+            <!-- Timeline View - Phase 3: 24h visual timeline -->
+            <div class="timeline-view" id="timelineView" aria-label="24 hour timeline view">
+                <div class="timeline-header">24-Hour Timeline <small>(color dots = dose status)</small></div>
+                <div class="timeline-bar" id="timelineBar" role="img" aria-label="Timeline bar showing doses over 24 hours"></div>
+                <div class="timeline-legend">
+                    <span><i class="timeline-dot pending" aria-hidden="true"></i> Pending</span>
+                    <span><i class="timeline-dot taken" aria-hidden="true"></i> Taken</span>
+                    <span><i class="timeline-dot missed" aria-hidden="true"></i> Missed</span>
+                    <span><i class="timeline-dot now" aria-hidden="true"></i> Now</span>
+                </div>
+            </div>
+
+            <!-- Schedule grid - dynamically populated by JavaScript (Phase 2/3 grouped) -->
+            <div class="schedule-grid" id="scheduleList" aria-live="polite"></div>
+
+            <!-- Confirmation area - global action for demo -->
+            <div class="confirmation-area" id="confirmationArea">
+                <p><strong>Confirmation:</strong> Patient presses IoT button → marks dose as Taken (simulation below)</p>
+                <button class="btn btn-primary" type="button" id="confirmTakenBtn" aria-label="Confirm dose taken via IoT button">✅ Confirm Dose Taken (IoT Button)</button>
+            </div>
+        </section>
+
+        <!-- ==================== QUICK ACTIONS - Phase 8 Dashboard Summary ==================== -->
+        <section id="quickActions" class="card" aria-labelledby="quickTitle">
+            <div class="card-header">
+                <h2 id="quickTitle">⚡ Quick Actions - Demo Ready</h2>
+                <span class="badge badge-info">One Tap • 48px</span>
+            </div>
+            <p class="card-desc">Fast demo controls • All offline • Touch 48px+ • Works on mobile</p>
+            <div class="quick-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+                <button type="button" class="btn btn-success" id="quickMarkAllBtn" aria-label="Mark all pending as taken" style="min-height:48px;">✅ Mark All Taken</button>
+                <button type="button" class="btn btn-primary" id="quickSpeakAllBtn" aria-label="Speak all pending reminders" style="min-height:48px;">🔊 Speak All</button>
+                <button type="button" class="btn btn-warning" id="quickBuzzerBtn" aria-label="Trigger buzzer test" style="min-height:48px;">🔔 Buzzer</button>
+                <button type="button" class="btn btn-outline" id="quickStatsBtn" aria-label="Show compliance stats" style="min-height:48px;">📊 Stats</button>
+            </div>
+            <div class="compliance-summary" style="margin-top:12px; padding:10px; background:var(--gray-50); border-radius:8px; text-align:center; font-size:0.85rem;">
+                <span id="quickCompliance" aria-live="polite">Compliance: --</span> • <span id="quickNext" aria-live="polite">Next: --</span>
+            </div>
+        </section>
+
+        <!-- ==================== IoT Device Simulation Controls - Phase 5 ==================== -->
+        <section id="iotControls" class="card" aria-labelledby="iotTitle">
+            <div class="card-header">
+                <h2 id="iotTitle">🔌 IoT Device Simulation</h2>
+                <span class="badge badge-success" id="iotConnectionStatus">● Connected</span>
+            </div>
+            <p class="card-desc">Simulates ESP32/Arduino hardware • LEDs + Buzzer + Speaker • All offline, no physical hardware</p>
+            <div class="iot-controls-grid">
+                <label class="iot-toggle">
+                    <input type="checkbox" id="iotSimulateToggle" checked aria-label="Toggle IoT simulation">
+                    <span class="toggle-slider" aria-hidden="true"></span>
+                    <span class="toggle-label">Simulate IoT Device (ESP32)</span>
+                </label>
+                <div class="iot-status">
+                    <span>Connection:</span>
+                    <span id="iotConnectionText" class="badge badge-success">Connected • Mock GPIO</span>
+                    <span id="buzzerMuteStatus" class="badge badge-info">🔊 Buzzer Unmuted</span>
+                </div>
+            </div>
+            <div class="iot-actions">
+                <button class="btn btn-warning btn-sm" type="button" id="triggerLedBtn" aria-label="Trigger LED test">💡 Trigger LED Test</button>
+                <button class="btn btn-warning btn-sm" type="button" id="triggerBuzzerBtn" aria-label="Trigger buzzer test">🔔 Trigger Buzzer (Beep 440Hz)</button>
+                <button class="btn btn-outline btn-sm" type="button" id="muteBuzzerBtn" aria-label="Mute buzzer">🔇 Mute Buzzer</button>
+                <button class="btn btn-outline btn-sm" type="button" id="testDueNowBtn" aria-label="Simulate due now medicine">⏰ Simulate Due Now (5 min)</button>
+            </div>
+            <small style="color:var(--gray-500);font-size:0.72rem;display:block;margin-top:8px;">Mute persists in LocalStorage • Buzzer uses Web Audio API 440Hz 200ms • LEDs: yellow pending, <strong>fast yellow due now (≤5 min)</strong>, green taken, red missed</small>
+        </section>
+
+        <!-- IoT Simulation Row - LED + Buzzer + Speaker -->
+        <div class="iot-grid">
+
+            <!-- ==================== 5. LED SIMULATION - Phase 5 Enhanced ==================== -->
+            <section id="ledSimulation" class="card" aria-labelledby="ledTitle">
+                <div class="card-header">
+                    <h2 id="ledTitle">💡 LED Simulation</h2>
+                    <span class="badge badge-warning">IoT Device • Phase 5</span>
+                </div>
+                <p class="card-desc">Visual LED for each medicine. <strong>Blinking = Pending, Fast blinking = Due Now (≤5 min), Green = Taken, Red = Missed</strong></p>
+                <!-- LED container - dynamically populated by JavaScript (Phase 2-5) -->
+                <div class="led-container" id="ledContainer" aria-live="polite"></div>
+                <div class="led-legend">
+                    <span><i class="led-dot led-pending" aria-hidden="true"></i> Pending (Slow Blink)</span>
+                    <span><i class="led-dot led-due-now" aria-hidden="true"></i> Due Now (Fast Blink)</span>
+                    <span><i class="led-dot led-taken" aria-hidden="true"></i> Taken (Green)</span>
+                    <span><i class="led-dot led-missed" aria-hidden="true"></i> Missed (Red)</span>
+                </div>
+            </section>
+
+            <!-- ==================== 6. BUZZER SIMULATION - Phase 5 Enhanced ==================== -->
+            <section id="buzzerSimulation" class="card" aria-labelledby="buzzerTitle">
+                <div class="card-header">
+                    <h2 id="buzzerTitle">🔔 Buzzer Simulation</h2>
+                    <span class="badge badge-warning">IoT Device • Phase 5</span>
+                </div>
+                <p class="card-desc">Pulsing + vibration when reminder active • <strong>Faster when overdue, muted state persists</strong></p>
+                <!-- Buzzer visual - pulsing when .buzzer-active, faster when .buzzer-overdue, muted when .buzzer-muted -->
+                <div class="buzzer-wrapper">
+                    <div class="buzzer-visual" id="buzzerVisual" role="img" aria-label="Buzzer status visual">
+                        <div class="buzzer-icon" aria-hidden="true">🔔</div>
+                        <div class="buzzer-wave wave1" aria-hidden="true"></div>
+                        <div class="buzzer-wave wave2" aria-hidden="true"></div>
+                        <div class="buzzer-wave wave3" aria-hidden="true"></div>
+                    </div>
+                    <p class="buzzer-label" id="buzzerLabel">Idle - No Reminder</p>
+                    <p class="buzzer-sub" id="buzzerSub">Shows buzzing when pending doses exist • Web Audio beep 440Hz</p>
+                </div>
+                <!-- Idle state example -->
+                <div class="buzzer-wrapper buzzer-idle-demo">
+                    <div class="buzzer-visual" id="buzzerIdle" role="img" aria-label="Idle buzzer reference">
+                        <div class="buzzer-icon" aria-hidden="true">🔕</div>
+                    </div>
+                    <p class="buzzer-label">Idle Reference</p>
+                </div>
+                <div class="buzzer-controls">
+                    <button class="btn btn-warning btn-sm" type="button" id="buzzerTestBtn" aria-label="Test buzzer">🔔 Test Buzzer</button>
+                    <button class="btn btn-outline btn-sm" type="button" id="buzzerStopBtn" aria-label="Stop buzzer">🔕 Stop</button>
+                    <button class="btn btn-outline btn-sm" type="button" id="buzzerMuteBtn" aria-label="Mute buzzer">🔇 Mute</button>
+                </div>
+            </section>
+
+            <!-- ==================== 7. SPEAKER TEST (TTS) - Phase 4 ==================== -->
+            <section id="speakerTest" class="card" aria-labelledby="speakerTitle">
+                <div class="card-header">
+                    <h2 id="speakerTitle">🔊 Speaker Test (TTS)</h2>
+                    <span class="badge badge-success">Web Speech API • Phase 4</span>
+                </div>
+                <p class="card-desc">Browser TTS - No API key, works offline on Chrome • Supports Kannada (kn-IN), Hindi (hi-IN), English (en-US)</p>
+                <div class="speaker-controls">
+                    <div class="form-group">
+                        <label for="ttsText">Reminder Message Preview</label>
+                        <textarea id="ttsText" rows="3" placeholder="Time to take your medicine!" aria-label="TTS preview text">Time to take your medicine - Metformin 1 tablet. ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುವ ಸಮಯ! मेडिसिन लेने का समय!</textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ttsVoice">Voice Language</label>
+                            <select id="ttsVoice" aria-label="TTS voice language">
+                                <option value="en-US">🇬🇧 English - en-US</option>
+                                <option value="hi-IN">🇮🇳 Hindi - hi-IN</option>
+                                <option value="kn-IN">🇮🇳 Kannada - kn-IN</option>
+                            </select>
+                            <small id="voiceStatus" style="margin-top:4px;display:block;" aria-live="polite">Checking voices...</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Volume</label>
+                            <div class="volume-display" aria-live="polite">🔊 <span id="volumeValue">100%</span> • Chrome Best Support</div>
+                        </div>
+                    </div>
+                    <!-- Phase 4: Volume & Speed Sliders -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="volumeSlider">🔊 Volume: <span id="volumeValue2">100%</span></label>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="100" step="5" aria-label="Volume slider">
+                            <small>0% (mute) → 100% (max)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="speedSlider">⚡ Speed: <span id="speedValue">0.9</span>x</label>
+                            <input type="range" id="speedSlider" min="0.5" max="2.0" value="0.9" step="0.1" aria-label="Speech speed slider">
+                            <small>0.5 (slow) → 2.0 (fast) • Default 0.9 for elderly</small>
+                        </div>
+                    </div>
+                    <!-- Visual Audio Indicator - Phase 4 -->
+                    <div class="speaker-visual" id="speakerVisual" role="img" aria-label="Speaker visual feedback">
+                        <div class="speaker-icon" id="speakerIcon" aria-hidden="true">🔊</div>
+                        <div class="speaker-waveform" id="speakerWaveform" aria-hidden="true">
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                        </div>
+                        <span class="speaker-status" id="speakerStatus" aria-live="polite">Ready</span>
+                    </div>
+                    <!-- Speaker Buttons - Phase 4 -->
+                    <button class="btn btn-primary btn-block" type="button" id="speakerTestBtn" aria-label="Play reminder TTS test">▶️ Play Reminder (Test Speaker)</button>
+                    <div class="speaker-extra-controls">
+                        <button class="btn btn-success btn-sm" type="button" id="speakAllBtn" aria-label="Speak all pending reminders">🔊 Speak All Pending</button>
+                        <button class="btn btn-outline btn-sm" type="button" id="stopSpeakingBtn" aria-label="Stop speaking">⏹️ Stop</button>
+                    </div>
+                    <div class="speaker-demo-text">
+                        <p><strong>Demo Flow (Tomorrow):</strong> Caregiver sets schedule → Website triggers TTS + LED + Buzzer at scheduled time → Son demonstrates speaker.</p>
+                        <p style="margin-top:6px;"><strong>Phase 4 Test:</strong> Add medicine with kn-IN/hi-IN → Click "🔊 Test Speaker" on card → Hear localized reminder. Volume/Speed sliders adjust speech.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Bottom Row - History + Caregiver -->
+        <div class="bottom-grid">
+
+            <!-- ==================== 9. HISTORY SECTION ==================== -->
+            <section id="historyLog" class="card" aria-labelledby="historyTitle">
+                <div class="card-header">
+                    <h2 id="historyTitle">📜 Dose History</h2>
+                    <span class="badge badge-info">Last 7 Days</span>
+                </div>
+                <p class="card-desc">Log of all doses - Taken / Missed timeline</p>
+                <!-- History list - dynamically populated by JavaScript (Phase 2) -->
+                <div class="history-list" id="historyList" aria-live="polite"></div>
+                <button class="btn btn-outline btn-sm btn-block" type="button" aria-label="View full history (demo)">View Full History</button>
+            </section>
+
+            <!-- ==================== 10. CAREGIVER VIEW (Compliance Summary) ==================== -->
+            <section id="caregiverView" class="card caregiver-card" aria-labelledby="caregiverTitle">
+                <div class="card-header">
+                    <h2 id="caregiverTitle">👨‍👩‍👧 Caregiver Dashboard</h2>
+                    <span class="badge badge-success">Mother's Compliance</span>
+                </div>
+                <p class="card-desc">Today's overview for son/caregiver - remote monitoring simulation</p>
+                
+                <!-- Summary stats - Phase 2 + Phase 3 enhanced -->
+                <div class="compliance-stats">
+                    <div class="stat-box stat-taken">
+                        <span class="stat-number" id="statTaken" aria-live="polite">0</span>
+                        <span class="stat-label">Taken</span>
+                    </div>
+                    <div class="stat-box stat-pending">
+                        <span class="stat-number" id="statPending" aria-live="polite">0</span>
+                        <span class="stat-label">Pending</span>
+                    </div>
+                    <div class="stat-box stat-missed">
+                        <span class="stat-number" id="statMissed" aria-live="polite">0</span>
+                        <span class="stat-label">Missed</span>
+                    </div>
+                </div>
+                <!-- Phase 3: Upcoming vs Overdue breakdown -->
+                <div class="compliance-stats">
+                    <div class="stat-box stat-upcoming">
+                        <span class="stat-number" id="statUpcoming">0</span>
+                        <span class="stat-label">📆 Upcoming</span>
+                    </div>
+                    <div class="stat-box stat-overdue">
+                        <span class="stat-number" id="statOverdue">0</span>
+                        <span class="stat-label">⏰ Overdue</span>
+                    </div>
+                    <div class="stat-box" style="background:white;border:1px solid var(--blue);">
+                        <span class="stat-number" id="statNextDose" style="font-size:1.0rem;color:var(--blue);">--</span>
+                        <span class="stat-label">Next Dose</span>
+                    </div>
+                </div>
+
+                <!-- Compliance bar -->
+                <div class="compliance-bar-wrapper">
+                    <div class="compliance-bar-header">
+                        <span>Compliance Today</span>
+                        <span id="complianceText"><strong>0%</strong> (0/0 taken)</span>
+                    </div>
+                    <div class="compliance-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-labelledby="complianceText">
+                        <div class="compliance-fill" id="complianceFill" style="width: 0%;"></div>
+                    </div>
+                    <p class="compliance-note">Goal: 100% • Missed doses notified to caregiver</p>
+                </div>
+
+                <!-- Caregiver actions -->
+                <div class="caregiver-actions">
+                    <div class="caregiver-info">
+                        <p>👩 Patient: Mother (Home IoT Device)</p>
+                        <p>👨 Caregiver: Son (Web Dashboard)</p>
+                        <p>📶 IoT Status: <span class="text-green">● Connected (Simulated)</span></p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="button" aria-label="Call mother (demo)">📞 Call Mother</button>
+                    <button class="btn btn-outline btn-sm" type="button" aria-label="Refresh status" onclick="autoMissUpdate(); showToast('🔄 Status refreshed', 'info')">🔄 Refresh Status</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer - Phase 8 polished -->
+        <footer class="footer" role="contentinfo">
+            <p>Medication Reminder System • Phase 8: Demo-Ready Polish • Offline • Flask + SQLite • Web Speech API • Mock OCR</p>
+            <p>Designed for Low-Literacy Elderly • Kannada | Hindi | English • Chrome Optimized • SQLite + Flask • 3-5 min demo</p>
+            <p style="margin-top:6px;"><a href="#" id="footerDemoLink" style="color:var(--blue); text-decoration:underline;" aria-label="Open demo instructions">Demo Instructions</a> • <span id="footerVersion">v8.0.0 • 2026-09-04</span> • <span id="footerOffline">● Online</span> • <a href="/health" target="_blank" style="color:var(--gray-500);">Health</a></p>
+            <noscript><p style="color:var(--red); margin-top:8px;">⚠️ JavaScript required for full functionality. Enable JS in Chrome.</p></noscript>
+        </footer>
+    </div>
+
+    <!-- Demo Instructions Modal - Phase 8 -->
+    <div id="demoModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="demoModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="demoModalTitle">📋 Demo Script - 3-5 Minutes</h3>
+                <button type="button" class="btn btn-outline btn-sm" id="closeDemoModal" aria-label="Close demo instructions">✕</button>
+            </div>
+            <div class="modal-body" style="text-align:left; font-size:0.88rem; line-height:1.6;">
+                <ol style="padding-left:18px; margin:0;">
+                    <li><strong>Load Demo (10s):</strong> Click <code>🚀 Load Demo Data</code> → 3 medicines appear (Metformin en-US, Dolo kn-IN, Vitamin D3 hi-IN) • Check LED yellow blink, buzzer pulsing</li>
+                    <li><strong>Speaker Test (30s):</strong> Click <code>🔊 Test Speaker</code> on Dolo card → Hear Kannada <em>“ಅಮ್ಮ, Dolo 650 ತೆಗೆದುಕೊಳ್ಳುವ ಸಮయ...”</em> • Adjust volume/speed sliders → replay</li>
+                    <li><strong>Hindi Test (20s):</strong> Click `Test Speaker` on Vitamin D3 → Hear Hindi • Then `▶️ Play Reminder` in Speaker section with `hi-IN` selected</li>
+                    <li><strong>Upload Mock OCR (40s):</strong> Drag `any.jpg` to upload zone → `Analyze` → see 1-3 medicines extracted → `Add All to Schedule` → new cards appear • Check history</li>
+                    <li><strong>Due Now (20s):</strong> Click <code>⏰ Simulate Due Now</code> → LED fast blink + buzzer fast + beep 880Hz → <code>✅ Mark as Taken</code> → LED green, buzzer stops, compliance ↑</li>
+                    <li><strong>Buzzer & LED (15s):</strong> Click <code>🔇 Mute</code> → buzzer muted persists, <code>🔔 Trigger Buzzer</code> → beep+vibration, <code>💡 Trigger LED</code> → flash</li>
+                    <li><strong>Filters & Timeline (15s):</strong> Click `⏳ Pending` → only pending, `✅ Taken` → taken, `24-Hour Timeline` shows dots</li>
+                    <li><strong>Compliance (10s):</strong> Show Caregiver Dashboard `33% → 66% → 100%` after marking, `Next dose` updates, browser tab badge `💊 (2)`</li>
+                    <li><strong>Reset (5s):</strong> Click <code>🔄 Reset Demo</code> → clears DB via <code>/api/demo/reset</code>, history, shows empty state</li>
+                </ol>
+                <div style="margin-top:12px; padding:10px; background:var(--yellow-light); border-radius:8px; font-size:0.82rem;">
+                    <strong>Tech Highlights to Mention:</strong> Offline-first (SQLite file + localStorage fallback, no cloud), Web Speech API free (kn-IN/hi-IN/en-US), Web Audio 440Hz, Flask + SQLite, vanilla JS, Chrome best, responsive 48px touch, dark mode, ARIA.
+                </div>
+                <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-primary btn-sm" id="startAutoDemoBtn" aria-label="Start auto demo">▶️ Start Auto Demo</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="modalLoadDemoBtn" aria-label="Load demo now">🚀 Load Demo Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="modalOverlay" class="modal-overlay" style="display:none;" aria-hidden="true"></div>
+
+    <!-- JavaScript - Single bundle, no duplicate to avoid console 404 errors -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
