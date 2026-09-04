@@ -1736,7 +1736,7 @@ function speakAllPending() {
  * Handles Chrome's async voice loading (onvoiceschanged)
  */
 function initTTS() {
-    const voiceStatus = document.getElementById("voiceStatus");
+    const voiceStatus = document.getElementById("ttsVoiceStatus") || document.getElementById("voiceStatus");
     const ttsVoiceSelect = document.getElementById("ttsVoice");
 
     function updateVoiceStatus() {
@@ -3444,6 +3444,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Phase 6/7: Initialize Upload (Phase 7 now uses backend API)
     await initUpload();
 
+    // Phase 8.5: Initialize Voice Agent (simulated SLM)
+    try { initVoiceAgent(); } catch (e) { console.warn("initVoiceAgent failed", e); }
+
     // Phase 8: Initialize polish features - demo mode, quick actions, offline, dark mode, demo modal
     // CRITICAL FIX: Previously these were defined but never called, causing demo buttons to do nothing
     try { initDemoMode(); } catch (e) { console.warn("initDemoMode failed", e); }
@@ -3488,6 +3491,323 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Friendly dev hint
     console.log("Try: loadSampleMedicines() | autoDemoFlow() | speakAllPending() | updateStats()");
 });
+
+// ==================== VOICE AGENT (SLM Simulation) - Phase 8.5 ====================
+// Uses Web Speech API (SpeechRecognition) for STT, with rule-based response generation
+
+let voiceAgentState = {
+    isListening: false,
+    recognition: null,
+    currentTranscript: "",
+};
+
+/**
+ * Initialize voice agent with Speech Recognition API
+ */
+function initVoiceAgent() {
+    const startBtn = document.getElementById("voiceStartBtn");
+    const stopBtn = document.getElementById("voiceStopBtn");
+    const statusEl = document.getElementById("voiceStatus");
+    const transcriptEl = document.getElementById("voiceTranscription");
+    const responseEl = document.getElementById("voiceResponse");
+
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        if (statusEl) statusEl.textContent = "❌ STT not supported (use Chrome)";
+        if (startBtn) startBtn.disabled = true;
+        showToast("❌ Speech Recognition not supported in this browser. Use Chrome.", "error");
+        return;
+    }
+
+    // Create recognition instance
+    voiceAgentState.recognition = new SpeechRecognition();
+    const rec = voiceAgentState.recognition;
+
+    // Configure
+    rec.lang = "en-US";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+
+    // --- Event Handlers ---
+
+    rec.onstart = function() {
+        voiceAgentState.isListening = true;
+        if (statusEl) {
+            statusEl.textContent = "🎤 Listening...";
+            statusEl.className = "badge badge-warning";
+        }
+        if (startBtn) startBtn.disabled = true;
+        if (stopBtn) stopBtn.disabled = false;
+        if (transcriptEl) {
+            transcriptEl.textContent = "👂 Listening... speak now!";
+            transcriptEl.style.color = "var(--gray-900)";
+        }
+        if (responseEl) {
+            responseEl.textContent = "🤖 Processing...";
+            responseEl.style.color = "var(--gray-700)";
+        }
+        // Phase 8.5 polish: highlight container while listening
+        const container = document.querySelector(".voice-agent-container");
+        if (container) container.classList.add("listening");
+        showToast("🎤 Listening... speak your question", "info");
+    };
+
+    rec.onend = function() {
+        voiceAgentState.isListening = false;
+        if (statusEl) {
+            statusEl.textContent = "Idle";
+            statusEl.className = "badge badge-info";
+        }
+        if (startBtn) startBtn.disabled = false;
+        if (stopBtn) stopBtn.disabled = true;
+
+        if (!voiceAgentState.currentTranscript) {
+            if (transcriptEl) {
+                transcriptEl.textContent = "👂 I'm listening... (click Start and speak)";
+                transcriptEl.style.color = "var(--gray-500)";
+            }
+        }
+        const container = document.querySelector(".voice-agent-container");
+        if (container) container.classList.remove("listening");
+    };
+
+    rec.onresult = function(event) {
+        const result = event.results[0][0].transcript.trim();
+        voiceAgentState.currentTranscript = result;
+
+        if (transcriptEl) {
+            transcriptEl.textContent = `🗣️ "${result}"`;
+            transcriptEl.style.color = "var(--gray-900)";
+        }
+
+        processVoiceQuestion(result);
+    };
+
+    rec.onerror = function(event) {
+        console.warn("Speech recognition error:", event.error);
+        if (statusEl) {
+            statusEl.textContent = `⚠️ Error: ${event.error}`;
+            statusEl.className = "badge badge-danger";
+        }
+        if (transcriptEl) {
+            transcriptEl.textContent = `❌ Error: ${event.error}. Try again.`;
+            transcriptEl.style.color = "var(--red)";
+        }
+        showToast(`⚠️ Speech error: ${event.error}`, "error");
+        voiceAgentState.isListening = false;
+        if (startBtn) startBtn.disabled = false;
+        if (stopBtn) stopBtn.disabled = true;
+        const cont = document.querySelector(".voice-agent-container");
+        if (cont) cont.classList.remove("listening");
+    };
+
+    // --- Button Handlers ---
+
+    if (startBtn) {
+        startBtn.addEventListener("click", function() {
+            try {
+                voiceAgentState.currentTranscript = "";
+                rec.start();
+            } catch (e) {
+                console.warn("Could not start recognition:", e);
+                showToast("Could not start listening. Try again.", "error");
+            }
+        });
+    }
+
+    if (stopBtn) {
+        stopBtn.addEventListener("click", function() {
+            try {
+                rec.stop();
+            } catch (e) {
+                console.warn("Could not stop recognition:", e);
+            }
+        });
+    }
+
+    // --- Example Question Buttons ---
+
+    document.querySelectorAll(".voice-example-btn").forEach((btn) => {
+        btn.addEventListener("click", function() {
+            const question = this.dataset.question;
+            if (!question) return;
+            if (transcriptEl) {
+                transcriptEl.textContent = `🗣️ "${question}" (simulated)`;
+                transcriptEl.style.color = "var(--gray-900)";
+            }
+            processVoiceQuestion(question);
+        });
+    });
+
+    // --- Key shortcut: Space to start/stop ---
+    document.addEventListener("keydown", function(e) {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+        if (e.key === " " || e.key === "Space") {
+            e.preventDefault();
+            if (voiceAgentState.isListening) {
+                if (stopBtn) stopBtn.click();
+            } else {
+                if (startBtn) startBtn.click();
+            }
+        }
+    });
+
+    console.log("Voice Agent initialized (simulated SLM)");
+}
+
+/**
+ * Process voice question - Simulated SLM with rule-based response
+ * @param {string} question - The transcribed question
+ */
+function processVoiceQuestion(question) {
+    const responseEl = document.getElementById("voiceResponse");
+    if (!responseEl) return;
+
+    responseEl.textContent = "🤖 Thinking...";
+    responseEl.style.color = "var(--gray-700)";
+
+    // Build knowledge base from medicines
+    let medicineInfo = [];
+    let totalTaken = 0;
+    let totalPending = 0;
+    let totalMissed = 0;
+    let allMedicines = [];
+
+    medicines.forEach((med) => {
+        med.times.forEach((t) => {
+            const status = getStatus(med, t);
+            allMedicines.push({ name: med.name, time: t, status, dosage: med.dosage });
+            if (status === "taken") totalTaken++;
+            else if (status === "pending") totalPending++;
+            else if (status === "missed") totalMissed++;
+        });
+        const statuses = med.times.map(t => getStatus(med, t));
+        medicineInfo.push({
+            name: med.name,
+            dosage: med.dosage,
+            times: med.times,
+            statuses: statuses,
+            allTaken: statuses.every(s => s === "taken"),
+            anyMissed: statuses.some(s => s === "missed"),
+            anyPending: statuses.some(s => s === "pending"),
+        });
+    });
+
+    const totalDoses = allMedicines.length;
+    const compliance = totalDoses > 0 ? Math.round((totalTaken / totalDoses) * 100) : 0;
+
+    // --- Intent matching ---
+    const q = question.toLowerCase();
+
+    let matchedMedicine = null;
+    for (const med of medicineInfo) {
+        if (q.includes(med.name.toLowerCase())) {
+            matchedMedicine = med;
+            break;
+        }
+    }
+    if (!matchedMedicine) {
+        for (const med of medicineInfo) {
+            if (q.includes(med.name.slice(0, 4).toLowerCase())) {
+                matchedMedicine = med;
+                break;
+            }
+        }
+    }
+
+    // --- Generate response ---
+    let response = "";
+
+    if (matchedMedicine) {
+        const med = matchedMedicine;
+        const timesStr = med.times.map(t => formatTime(t)).join(", ");
+
+        if (med.allTaken) {
+            response = `✅ Yes, ${med.name} has been taken. All doses (${timesStr}) are completed. Good job Amma!`;
+        } else if (med.anyMissed) {
+            const missedTimes = med.times.filter((t, i) => med.statuses[i] === "missed").map(formatTime).join(", ");
+            response = `⚠️ ${med.name} is missed for ${missedTimes}. Please remind Amma to take ${med.dosage}.`;
+        } else if (med.anyPending) {
+            const pendingTimes = med.times.filter((t, i) => med.statuses[i] === "pending").map(formatTime).join(", ");
+            const nextTime = med.times.find((t, i) => med.statuses[i] === "pending");
+            response = `⏳ ${med.name} is pending for ${pendingTimes}. The next dose is at ${formatTime(nextTime)}. Please remind Amma.`;
+        } else {
+            response = `ℹ️ ${med.name} status: ${med.allTaken ? "taken" : "pending"}. Doses: ${timesStr}.`;
+        }
+    } else if (q.includes("all") && (q.includes("taken") || q.includes("complete") || q.includes("done"))) {
+        if (totalDoses === 0) {
+            response = "ℹ️ No medicines are scheduled for today. Schedule some medicines first.";
+        } else if (totalPending === 0 && totalMissed === 0 && totalTaken > 0) {
+            response = `🎉 Yes! Amma has taken all ${totalTaken} doses today. Compliance: ${compliance}%. Great job Amma!`;
+        } else if (totalMissed > 0) {
+            response = `⚠️ Not yet. ${totalTaken} taken, ${totalPending} pending, ${totalMissed} missed. Please check missed doses.`;
+        } else if (totalPending > 0) {
+            response = `⏳ Not yet. ${totalTaken} taken, ${totalPending} pending. Remind Amma about pending doses.`;
+        } else {
+            response = `ℹ️ Today's status: ${totalTaken} taken, ${totalPending} pending, ${totalMissed} missed.`;
+        }
+    } else if (q.includes("miss") || q.includes("skip") || q.includes("forgot")) {
+        const missedMeds = medicineInfo.filter(m => m.anyMissed);
+        if (missedMeds.length === 0) {
+            response = "✅ No missed doses today! Amma is on track. 🎉";
+        } else {
+            const missedList = missedMeds.map(m => {
+                const missedTimes = m.times.filter((t, i) => m.statuses[i] === "missed").map(formatTime).join(", ");
+                return `${m.name} (${missedTimes})`;
+            }).join("; ");
+            response = `⚠️ Missed doses found: ${missedList}. Please remind Amma.`;
+        }
+    } else if (q.includes("next") || q.includes("due") || q.includes("time") || q.includes("when")) {
+        let next = null;
+        let minDiff = Infinity;
+        const nowMin = timeToMinutes(getCurrentTime());
+        medicines.forEach((med) => {
+            med.times.forEach((t) => {
+                if (getStatus(med, t) === "pending") {
+                    const diff = timeToMinutes(t) - nowMin;
+                    if (diff >= 0 && diff < minDiff) {
+                        minDiff = diff;
+                        next = { med: med, time: t };
+                    }
+                }
+            });
+        });
+        if (next) {
+            response = `⏰ Next dose is ${next.med.name} at ${formatTime(next.time)} (in ${getRelativeTime(next.time)}). Please remind Amma.`;
+        } else if (totalMissed > 0) {
+            response = `⚠️ No pending doses, but ${totalMissed} missed doses found. Please check the missed list.`;
+        } else {
+            response = "🎉 All doses for today are completed! Great job Amma!";
+        }
+    } else if (q.includes("summary") || q.includes("status") || q.includes("today")) {
+        if (totalDoses === 0) {
+            response = "ℹ️ No medicines are scheduled for today. Use the form to add medicines.";
+        } else {
+            response = `📊 Today's summary: ${totalTaken} taken, ${totalPending} pending, ${totalMissed} missed. Compliance: ${compliance}%. ${totalPending > 0 ? "Remind Amma about pending doses." : totalMissed > 0 ? "Check missed doses." : "All done! 🎉"}`;
+        }
+    } else {
+        if (totalDoses === 0) {
+            response = "ℹ️ I don't see any medicines scheduled. Please add medicines using the form, then ask me again.";
+        } else {
+            response = `ℹ️ I can tell you about Amma's medicines. Try asking: "Did Amma take her Metformin?" or "What's the next dose?" or "Summary for today."`;
+        }
+    }
+
+    // Display response
+    responseEl.textContent = `🤖 ${response}`;
+    responseEl.style.color = "var(--green-dark)";
+
+    // Speak the response using existing TTS
+    if (typeof speakCustomMessage === "function") {
+        speakCustomMessage(response, "en-US", (err) => {
+            if (err) console.warn("TTS error:", err);
+        });
+    }
+
+    showToast(`🤖 ${response.slice(0, 80)}${response.length > 80 ? "..." : ""}`, "info");
+}
 
 // ==================== EXPORTS FOR TESTING (if needed) ====================
 // Phase 8: Expose mock time helper for demo testing (optional auto-set time)
@@ -3549,3 +3869,7 @@ window.autoDemoFlow = autoDemoFlow;
 window.highlightDemo = highlightDemo;
 window.updateQuickSummary = updateQuickSummary;
 window.setMockTime = setMockTime;
+// Phase 8.5 Voice Agent exports
+window.initVoiceAgent = initVoiceAgent;
+window.processVoiceQuestion = processVoiceQuestion;
+window.voiceAgentState = voiceAgentState;

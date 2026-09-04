@@ -245,6 +245,56 @@
             </div>
         </section>
 
+<!-- ==================== VOICE AGENT (SLM Simulation) - Demo ==================== -->
+<section id="voiceAgent" class="card" aria-labelledby="voiceTitle">
+    <div class="card-header">
+        <h2 id="voiceTitle">🎤 Voice Agent — Ask About Amma's Medicine</h2>
+        <span class="badge badge-success">Demo • Browser STT + TTS</span>
+    </div>
+    <p class="card-desc">Ask about Amma's medication status. Speech-to-text transcribes your question, looks up the schedule, and speaks back the answer.</p>
+    
+    <div class="voice-agent-container" style="display:flex; flex-direction:column; gap:12px; padding:12px; background:var(--gray-50); border-radius:var(--radius-sm); border:1px solid var(--gray-300);">
+        
+        <!-- Voice input area -->
+        <div class="voice-input-area" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button type="button" id="voiceStartBtn" class="btn btn-primary" style="min-height:48px; flex:1; min-width:120px;">
+                🎤 Start Listening
+            </button>
+            <button type="button" id="voiceStopBtn" class="btn btn-outline" style="min-height:48px;" disabled>
+                ⏹️ Stop
+            </button>
+            <span id="voiceStatus" class="badge badge-info" style="font-size:0.85rem; padding:6px 12px;">Idle</span>
+        </div>
+        
+        <!-- Transcription display -->
+        <div class="voice-transcription" style="padding:10px; background:white; border-radius:var(--radius-sm); border:1px solid var(--gray-200); min-height:50px;">
+            <p style="margin:0; font-size:0.90rem; color:var(--gray-500);">
+                <span id="voiceTranscription">👂 I'm listening... (click Start and speak)</span>
+            </p>
+        </div>
+        
+        <!-- Response display -->
+        <div class="voice-response" style="padding:10px; background:var(--green-light); border-radius:var(--radius-sm); border:1px solid #A5D6A7; min-height:50px;">
+            <p style="margin:0; font-size:0.90rem; color:var(--green-dark);">
+                <span id="voiceResponse">🤖 Agent response will appear here</span>
+            </p>
+        </div>
+        
+        <!-- Quick example questions -->
+        <div class="voice-examples" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.80rem;">
+            <span style="font-weight:600; color:var(--gray-700);">Try asking:</span>
+            <button class="btn btn-outline btn-sm voice-example-btn" data-question="Did Amma take her morning medicine?">🌅 Morning medicine?</button>
+            <button class="btn btn-outline btn-sm voice-example-btn" data-question="What medicine is due next?">⏰ Next dose?</button>
+            <button class="btn btn-outline btn-sm voice-example-btn" data-question="Has she taken all her medicines today?">📊 All taken today?</button>
+            <button class="btn btn-outline btn-sm voice-example-btn" data-question="Did she miss any medicines?">❌ Missed any?</button>
+        </div>
+    </div>
+    <small style="color:var(--gray-500);font-size:0.72rem;display:block;margin-top:8px;">
+        🎤 Uses browser <strong>SpeechRecognition API</strong> (Chrome best) — no cloud, no API keys. 
+        Simulated SLM responds with medication status from SQLite backend.
+    </small>
+</section>
+
         <!-- ==================== IoT Device Simulation Controls - Phase 5 ==================== -->
         <section id="iotControls" class="card" aria-labelledby="iotTitle">
             <div class="card-header">
@@ -345,7 +395,7 @@
                                 <option value="hi-IN">🇮🇳 Hindi - hi-IN</option>
                                 <option value="kn-IN">🇮🇳 Kannada - kn-IN</option>
                             </select>
-                            <small id="voiceStatus" style="margin-top:4px;display:block;" aria-live="polite">Checking voices...</small>
+                            <small id="ttsVoiceStatus" style="margin-top:4px;display:block;" aria-live="polite">Checking voices...</small>
                         </div>
                         <div class="form-group">
                             <label>Volume</label>
