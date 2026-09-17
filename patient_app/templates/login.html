@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💊 Patient Login - Medication Reminder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💊</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <h1 class="login-title">💊 My Medicines</h1>
+            <p class="login-subtitle" id="loginSubtitle">Patient login</p>
+
+            {% if error %}
+            <div id="errorArea" class="error-area" role="alert" aria-live="assertive">{{ error }}</div>
+            {% else %}
+            <div id="errorArea" class="error-area" style="display:none;" role="alert" aria-live="assertive"></div>
+            {% endif %}
+
+            <form id="loginForm" method="POST" action="/login" novalidate>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="e.g., patient1" required autocomplete="username" style="min-height:48px; font-size:1.05rem;">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password" style="min-height:48px; font-size:1.05rem;">
+                </div>
+                <div class="form-group">
+                    <label for="languageSelectLogin">Language</label>
+                    <select id="languageSelectLogin" name="language" style="min-height:48px; font-size:1rem;">
+                        <option value="en-US">🇬🇧 English (en-US)</option>
+                        <option value="hi-IN">🇮🇳 हिन्दी (hi-IN)</option>
+                        <option value="kn-IN">🇮🇳 ಕನ್ನಡ (kn-IN)</option>
+                    </select>
+                    <small style="color:var(--gray-500); font-size:0.75rem;">Only affects UI copy</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="min-height:56px; font-size:1.15rem; font-weight:700;">🔓 Login</button>
+            </form>
+
+            <div class="login-hint">
+                <p><strong>Demo:</strong> patient1 / 1234</p>
+                <p style="font-size:0.80rem; color:var(--gray-500);">Try patient2 / 1234, patient3 / 1234 etc.</p>
+            </div>
+            <p class="login-note">Caregivers: use the caregiver website.</p>
+        </div>
+    </div>
+
+    <script>
+        // Language affects UI copy on login page
+        const copy = {
+            'en-US': {title:'💊 My Medicines', subtitle:'Patient login', username:'Username', password:'Password', login:'🔓 Login', hint:'Demo: patient1 / 1234', note:'Caregivers: use the caregiver website.'},
+            'hi-IN': {title:'💊 मेरी दवाइयाँ', subtitle:'रोगी लॉगिन', username:'उपयोगकर्ता नाम', password:'पासवर्ड', login:'🔓 लॉगिन', hint:'डेमो: patient1 / 1234', note:'देखभालकर्ता: देखभालकर्ता वेबसाइट का उपयोग करें।'},
+            'kn-IN': {title:'💊 ನನ್ನ ಔಷಧಿಗಳು', subtitle:'ರೋಗಿಯ ಲಾಗಿನ್', username:'ಬಳಕೆದಾರ ಹೆಸರು', password:'ಪಾಸ್‌ವರ್ಡ್', login:'🔓 ಲಾಗಿನ್', hint:'ಡೆಮೊ: patient1 / 1234', note:'ಆರೈಕೆದಾರರು: ಆರೈಕೆದಾರರ ವೆಬ್‌ಸೈಟ್ ಬಳಸಿ.'}
+        };
+        const langSel = document.getElementById('languageSelectLogin');
+        const storedLang = localStorage.getItem('patient_lang') || 'en-US';
+        langSel.value = storedLang;
+        function applyLoginLang(lang){
+            const c = copy[lang] || copy['en-US'];
+            document.querySelector('.login-title').textContent = c.title;
+            document.getElementById('loginSubtitle').textContent = c.subtitle;
+            document.querySelector('label[for="username"]').textContent = c.username;
+            document.querySelector('label[for="password"]').textContent = c.password;
+            document.querySelector('button[type="submit"]').textContent = c.login;
+            const h = document.querySelector('.login-hint p');
+            if(h) h.textContent = c.hint;
+            const n = document.querySelector('.login-note');
+            if(n) n.textContent = c.note;
+        }
+        applyLoginLang(storedLang);
+        langSel.addEventListener('change', function(){
+            localStorage.setItem('patient_lang', this.value);
+            applyLoginLang(this.value);
+        });
+
+        // Handle form via fetch to show errors without reload where possible, but also support normal POST
+        const form = document.getElementById('loginForm');
+        const errorArea = document.getElementById('errorArea');
+        form.addEventListener('submit', async function(e){
+            // If we want to support JSON handling, do fetch and then redirect
+            // Prevent default and do fetch
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if(!username || !password){
+                errorArea.textContent = 'Please enter both username and password.';
+                errorArea.style.display = 'block';
+                return;
+            }
+            // Language is stored already
+            localStorage.setItem('patient_lang', langSel.value);
+            try {
+                const resp = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin',
+                    body: JSON.stringify({username, password})
+                });
+                const data = await resp.json().catch(()=>({}));
+                if(resp.ok){
+                    window.location.href = '/';
+                } else {
+                    errorArea.textContent = data.error || 'Login failed';
+                    errorArea.style.display = 'block';
+                }
+            } catch(err){
+                // Fallback to form submit
+                errorArea.textContent = 'Network error. Trying fallback...';
+                errorArea.style.display = 'block';
+                // fallback native submit after 1s
+                setTimeout(()=>{ form.removeEventListener('submit', arguments.callee); form.submit(); }, 800);
+            }
+        });
+        // Show server-rendered error if present
+        (function(){
+            const err = errorArea.textContent.trim();
+            if(err){ errorArea.style.display='block'; }
+        })();
+    </script>
+    <style>
+        .login-body { background: #e8f5e9; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; }
+        .login-container { width:100%; max-width:480px; }
+        .login-card { background:white; border-radius:16px; padding:28px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); border-top:4px solid #4CAF50; }
+        .login-title { font-size:1.8rem; font-weight:800; text-align:center; margin-bottom:6px; }
+        .login-subtitle { text-align:center; color:var(--gray-500); margin-bottom:18px; font-size:1rem; }
+        .error-area { background:#FFEBEE; border:1px solid #EF9A9A; color:#c62828; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-weight:600; font-size:0.90rem; }
+        .login-hint { margin-top:16px; text-align:center; background:var(--gray-50); padding:10px; border-radius:8px; border:1px solid var(--gray-300); }
+        .login-note { text-align:center; margin-top:10px; font-size:0.82rem; color:var(--gray-500); }
+    </style>
+</body>
+</html>

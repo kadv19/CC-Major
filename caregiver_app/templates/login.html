@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨‍👩‍👧 Caregiver Login - Medication Reminder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👨‍👩‍👧</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <h1 class="login-title">👨‍👩‍👧 Caregiver Dashboard</h1>
+            <p class="login-subtitle">Caregiver login</p>
+
+            {% if error %}
+            <div id="errorArea" class="error-area" role="alert" aria-live="assertive">{{ error }}</div>
+            {% else %}
+            <div id="errorArea" class="error-area" style="display:none;" role="alert" aria-live="assertive"></div>
+            {% endif %}
+
+            <form id="loginForm" method="POST" action="/login" novalidate>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="e.g., caregiver" required autocomplete="username" style="min-height:48px; font-size:1.05rem;">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password" style="min-height:48px; font-size:1.05rem;">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="min-height:56px; font-size:1.15rem; font-weight:700;">🔓 Login</button>
+            </form>
+
+            <div class="login-hint">
+                <p><strong>Demo:</strong> caregiver / 1234</p>
+            </div>
+            <p class="login-note">Patients: use the patient website.</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const errorArea = document.getElementById('errorArea');
+        form.addEventListener('submit', async function(e){
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if(!username || !password){
+                errorArea.textContent = 'Please enter both username and password.';
+                errorArea.style.display = 'block';
+                return;
+            }
+            try {
+                const resp = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin',
+                    body: JSON.stringify({username, password})
+                });
+                const data = await resp.json().catch(()=>({}));
+                if(resp.ok){
+                    window.location.href = '/';
+                } else {
+                    errorArea.textContent = data.error || 'Login failed';
+                    errorArea.style.display = 'block';
+                }
+            } catch(err){
+                errorArea.textContent = 'Network error. Trying fallback...';
+                errorArea.style.display = 'block';
+                setTimeout(()=>{ form.removeEventListener('submit', arguments.callee); form.submit(); }, 800);
+            }
+        });
+        (function(){
+            const err = errorArea.textContent.trim();
+            if(err){ errorArea.style.display='block'; }
+        })();
+    </script>
+    <style>
+        .login-body { background: #e8f5e9; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; }
+        .login-container { width:100%; max-width:480px; }
+        .login-card { background:white; border-radius:16px; padding:28px; box-shadow: 0 10px 25px rgba(0,0,0,0.12); border-top:4px solid #4CAF50; }
+        .login-title { font-size:1.8rem; font-weight:800; text-align:center; margin-bottom:6px; }
+        .login-subtitle { text-align:center; color:var(--gray-500); margin-bottom:18px; font-size:1rem; }
+        .error-area { background:#FFEBEE; border:1px solid #EF9A9A; color:#c62828; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-weight:600; font-size:0.90rem; }
+        .login-hint { margin-top:16px; text-align:center; background:var(--gray-50); padding:10px; border-radius:8px; border:1px solid var(--gray-300); }
+        .login-note { text-align:center; margin-top:10px; font-size:0.82rem; color:var(--gray-500); }
+    </style>
+</body>
+</html>
