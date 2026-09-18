@@ -36,6 +36,8 @@
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5A9 9 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5z"></path></svg>
                         <span id="darkModeLabel">Dark</span>
                     </button>
+                    <button type="button" id="tourBtn" class="btn btn-outline btn-sm" aria-label="Take a tour of the dashboard" style="min-height:48px;">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M15.5 8.5l-2.3 5.2-5.2 2.3 2.3-5.2z" fill="currentColor"></path></svg>Take a tour</button>
                     <a href="/logout" id="logoutBtn" class="btn btn-outline btn-sm" style="min-height:48px; text-decoration:none;">Log out</a>
                 </div>
                 <span class="header-badge" id="caregiverBadge">{{ user.username }} • {{ user.name }}</span>
@@ -350,5 +352,6 @@
         window.__APP_VERSION__ = "{{ app_version }}";
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tour.js') }}"></script>
 </body>
 </html>

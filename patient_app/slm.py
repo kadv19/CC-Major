@@ -15,6 +15,18 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
+# Load optional .env file for local development (MEDREMIND_SLM_* vars take precedence)
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if os.path.exists(dotenv_path):
+    with open(dotenv_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, _, value = line.partition('=')
+                key = key.strip()
+                value = value.strip()
+                os.environ.setdefault(key, value)
+
 import database
 
 DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
