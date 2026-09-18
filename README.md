@@ -175,6 +175,7 @@ medication_reminder/
 ├── caregiver_app/
 │   ├── app.py             # :5002, caregiver session, patient selector, CRUD, OCR, voice agent
 │   ├── database.py          # serverless copy (sync via scripts/sync_shared.sh)
+│   ├── slm.py               # shared SLM voice-agent helper (serverless copy)
 │   ├── requirements.txt     # duplicate for Vercel (read relative to root dir)
 │   ├── vercel.json          # @vercel/python build for app.py
 │   ├── templates/login.html
@@ -190,7 +191,7 @@ Each app folder is **self-contained** (own `database.py`, `requirements.txt`, `v
 1. **Patient project** → import this repo → Root Directory = `patient_app` → deploy.
 2. **Caregiver project** → import this repo → Root Directory = `caregiver_app` → deploy.
 
-After changing shared code in `database.py`, re-copy it into the app folders:
+After changing shared code in `database.py` or `slm.py`, re-copy it into the app folders:
 
 ```bash
 ./scripts/sync_shared.sh
@@ -200,9 +201,9 @@ After changing shared code in `database.py`, re-copy it into the app folders:
 
 ## Voice agent (SLM)
 
-The caregiver Voice agent answers through a **real small language model** when one is reachable, and otherwise falls back to the built-in rule matcher — so it still works offline with zero config.
+Both sites have a voice assistant backed by a **real small language model** when one is reachable, and a deterministic fallback otherwise — so everything works offline with zero config. Shared logic lives in `slm.py` (mirrored into each app folder for Vercel).
 
-Resolution order on the server (`POST /api/voice-agent`):
+Resolution order (`slm.ask()`):
 1. `MEDREMIND_SLM_URL` set → hosted **OpenAI-compatible** `/chat/completions` endpoint (needs `MEDREMIND_SLM_API_KEY`)
 2. otherwise → **local Ollama** at `http://localhost:11434` (`/api/generate`)
 
@@ -214,10 +215,22 @@ Env vars:
 | `MEDREMIND_SLM_API_KEY` | Bearer key for hosted endpoints | *(none)* |
 | `MEDREMIND_SLM_MODEL` | model name | `llama3.2` |
 
+### Caregiver — Ask about a patient
+`POST /api/voice-agent` builds a prompt from the selected patient's real schedule. If the model is unreachable, the frontend falls back to its rule matcher unchanged.
+
+### Patient — Ask me, and confirm prompts
+The patient site has an "Ask me" card: voice or tap-question → `POST /api/voice-agent` answers in a simple patient tone, spoken aloud in their language. Every answer is checked against the schedule and an **acceptance prompt** is shown whenever a dose is due: **I took it** calls `POST /api/slm/respond` (outcome `accepted`) which confirms the dose and feeds compliance; **Not now** records `declined`. Nothing is auto-confirmed.
+
+Each exchange is logged (`slm_interactions` table): `answered`, `accepted`, `declined`, `unavailable`.
+
+### Caregiver — Adherence
+`GET /api/adherence?patient_id=X` returns how the patient *responded* to assistant prompts: accepted vs declined percentage. Shown in the compliance card ("Adherence to assistant prompts").
+
 Local example (Ollama, use a model you have pulled):
 
 ```bash
-MEDREMIND_SLM_MODEL=qwen2.5:7b .venv/bin/python caregiver_app/app.py
+MEDREMIND_SLM_MODEL=qwen2.5:7b .venv/bin/python patient_app/app.py   # patient, :5001
+MEDREMIND_SLM_MODEL=qwen2.5:7b .venv/bin/python caregiver_app/app.py  # caregiver, :5002
 ```
 
-On Vercel, set the three vars to a hosted provider (Groq tier is fast, ~1-2 s). If unset/unreachable, the endpoint answers from the rules and the UI is unchanged.
+On Vercel, set the three vars to a hosted provider (Groq tier is fast, ~1-2 s). If unset/unreachable, both sites answer from the deterministic fallback.

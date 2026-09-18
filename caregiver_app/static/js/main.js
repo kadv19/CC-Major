@@ -321,11 +321,28 @@ async function reloadActivePatientData(){
         renderHistory();
         renderUploadHistory();
         updateVoiceAgentForPatient();
+        loadAdherence();
     }catch(e){
         console.error('reload data failed',e);
         showToast('Failed to load patient data','error');
     } finally {
         hideLoading();
+    }
+}
+
+async function loadAdherence(){
+    const el=document.getElementById('adherenceText');
+    if(!el) return;
+    if(!activePatientId){ el.textContent='Adherence to assistant prompts: --'; return; }
+    try{
+        const d=await apiFetch(`/api/adherence?patient_id=${activePatientId}`);
+        if(d.adherence===null || d.adherence===undefined){
+            el.textContent='Adherence to assistant prompts: no prompts yet';
+        } else {
+            el.textContent=`Adherence to assistant prompts: ${d.adherence}% (${d.accepted} accepted / ${d.declined} declined)`;
+        }
+    }catch(e){
+        el.textContent='Adherence to assistant prompts: unavailable offline';
     }
 }
 

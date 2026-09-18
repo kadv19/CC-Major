@@ -1,6 +1,7 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import database
+import slm
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
@@ -173,6 +174,58 @@ def api_stats():
         patient_id = session['user_id']
         stats = database.get_stats(patient_id)
         return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/voice-agent', methods=['POST'])
+@login_required_patient
+def api_voice_agent():
+    """Patient asks the SLM assistant. Answers are grounded in their schedule."""
+    try:
+        patient_id = session['user_id']
+        data = request.get_json(silent=True) or {}
+        text = (data.get('text') or data.get('query') or '').strip()
+        if not text:
+            return jsonify({"error": "text required"}), 400
+        answer, source = slm.ask(text, patient_id, tone='patient')
+        if answer is None:
+            answer = slm.fallback(text, patient_id)
+            source = 'rule'
+        database.record_slm_interaction(patient_id, text, answer, 'unavailable' if source == 'unavailable' else 'answered')
+        return jsonify({"answer": answer, "source": source}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/slm/respond', methods=['POST'])
+@login_required_patient
+def api_slm_respond():
+    """Patient accepts or declines an SLM-proposed dose.
+
+    outcome 'accepted' -> confirm the dose (records as taken, feeds compliance).
+    outcome 'declined' -> log the decline only.
+    """
+    try:
+        patient_id = session['user_id']
+        data = request.get_json(silent=True) or {}
+        outcome = (data.get('outcome') or '').strip().lower()
+        question = (data.get('question') or '').strip()
+        answer_text = (data.get('answer') or '').strip()
+        if outcome not in ('accepted', 'declined'):
+            return jsonify({"error": "outcome must be accepted or declined"}), 400
+        if outcome == 'accepted':
+            medicine_id = data.get('medicine_id')
+            time = data.get('time')
+            if medicine_id is None or time is None:
+                return jsonify({"error": "medicine_id and time required to accept"}), 400
+            result = database.confirm_dose(int(medicine_id), time, None, patient_id)
+            if result is None:
+                return jsonify({"error": "Dose not found for this patient"}), 404
+            database.record_slm_interaction(patient_id, question, answer_text, 'accepted')
+            return jsonify({"status": "accepted", "dose": result}), 200
+        database.record_slm_interaction(patient_id, question, answer_text, 'declined')
+        return jsonify({"status": "declined"}), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

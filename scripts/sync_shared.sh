@@ -1,9 +1,11 @@
 #!/bin/bash
-# Sync the canonical sibling-module to the app folders.
+# Sync canonical shared modules into the app folders.
 # Each app folder is self-contained so Vercel (root directory = the app folder)
 # bundles everything it needs without "include files outside root directory".
 set -e
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cp "$DIR/database.py" "$DIR/patient_app/database.py"
-cp "$DIR/database.py" "$DIR/caregiver_app/database.py"
-echo "Synced database.py -> patient_app/ and caregiver_app/"
+for f in database.py slm.py; do
+  cp "$DIR/$f" "$DIR/patient_app/$f"
+  cp "$DIR/$f" "$DIR/caregiver_app/$f"
+done
+echo "Synced database.py & slm.py -> patient_app/ and caregiver_app/"

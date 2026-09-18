@@ -87,6 +87,15 @@ def init_db():
                 date_added DATE NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS slm_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                question TEXT,
+                answer TEXT,
+                outcome TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS doses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 patient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -514,6 +523,34 @@ def get_upload_history(patient_id, limit=10):
                 }
             )
         return result
+    finally:
+        conn.close()
+
+
+def record_slm_interaction(patient_id, question, answer_text, outcome):
+    """Log a voice-agent session. outcome: answered | accepted | declined | unavailable."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "INSERT INTO slm_interactions (patient_id, question, answer, outcome) "
+            "VALUES (?, ?, ?, ?)",
+            (patient_id, question, answer_text, outcome),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def get_slm_interactions(patient_id, limit=50):
+    """Returns the patient's voice-agent interactions, most recent first."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM slm_interactions WHERE patient_id = ? ORDER BY id DESC LIMIT ?",
+            (patient_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()
 

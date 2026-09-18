@@ -755,7 +755,169 @@ function renderAll(){
     updateTTSTextPreview();
 }
 
-// Load data
+// --- Patient voice agent (SLM) ---
+let patientRecognition=null;
+let patientListening=false;
+let lastPrompt={question:'', answer:''};
+
+async function askAssistant(question){
+    const ansEl=document.getElementById('patientVoiceAnswer');
+    const transEl=document.getElementById('patientTranscription');
+    if(transEl) transEl.textContent=question;
+    if(ansEl) ansEl.textContent='Thinking...';
+    let answer='';
+    try{
+        const res=await fetch('/api/voice-agent', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({text: question})
+        });
+        const data=await res.json();
+        answer=data.answer||'';
+    }catch(e){
+        const pend=[], taken=[], missed=[];
+        medicines.forEach(m=>m.times.forEach(t=>{
+            const s=getStatus(m,t);
+            if(s==='pending') pend.push(m); else if(s==='taken') taken.push(m); else missed.push(m);
+        }));
+        answer=`Today for you: taken ${taken.length}, pending ${pend.length}, missed ${missed.length}.`;
+    }
+    if(ansEl) ansEl.textContent=answer;
+    lastPrompt={question: question || '', answer};
+    const lang = currentUser?currentUser.language:'en-US';
+    speak(answer, lang);
+    showAcceptancePrompt();
+    return answer;
+}
+
+function showAcceptancePrompt(){
+    const area=document.getElementById('voiceAcceptArea');
+    if(!area) return;
+    let target=null;
+    medicines.forEach(med=>med.times.forEach(t=>{
+        const s=getStatus(med,t);
+        if(s==='pending' && (!target || timeToMinutes(t)<timeToMinutes(target.time))) target={med,time:t};
+    }));
+    if(!target){
+        medicines.forEach(med=>med.times.forEach(t=>{
+            if(getStatus(med,t)==='missed' && !target) target={med,time:t};
+        }));
+    }
+    const promptEl=document.getElementById('voicePromptText');
+    if(target){
+        if(promptEl) promptEl.textContent=`${target.med.name} at ${formatTime(target.time)} — take it now?`;
+
+        area.dataset.mid=target.med.id;
+        area.dataset.time=target.time;
+        area.style.display='block';
+    } else {
+        if(promptEl) promptEl.textContent='Nothing is due right now — all doses are done.';
+        area.dataset.mid='';
+        area.dataset.time='';
+        area.style.display='none';
+    }
+}
+
+function hideAcceptancePrompt(){
+    const area=document.getElementById('voiceAcceptArea');
+    if(area) area.style.display='none';
+}
+
+async function respondToPrompt(outcome){
+    const area=document.getElementById('voiceAcceptArea');
+    const mid=area?area.dataset.mid:null;
+    const time=area?area.dataset.time:null;
+    if(outcome==='accepted' && (!mid || !time)){
+        showToast('Choose a dose to confirm first', 'error');
+        return;
+    }
+    try{
+        const body={outcome, question:lastPrompt.question||'', answer:lastPrompt.answer||''};
+        if(outcome==='accepted'){ body.medicine_id=parseInt(mid,10); body.time=time; }
+        const res=await fetch('/api/slm/respond', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+        });
+        const data=await res.json();
+        if(res.ok && data.status==='accepted'){
+            showToast(`Marked ${formatTime(time)} as taken`, 'success');
+            await loadData(false);
+            renderAll();
+        } else if(res.ok && data.status==='declined'){
+            showToast('Noted — you can take it a little later.', 'info');
+        } else {
+            showToast((data.error||'Could not record your answer'), 'error');
+        }
+    }catch(e){
+        showToast('Could not reach the server', 'error');
+    }
+    hideAcceptancePrompt();
+}
+
+function initVoiceAgent(){
+    const startBtn=document.getElementById('patientVoiceStartBtn');
+    const stopBtn=document.getElementById('patientVoiceStopBtn');
+    const statusEl=document.getElementById('voiceAgentStatus');
+    const transEl=document.getElementById('patientTranscription');
+    const acceptBtn=document.getElementById('voiceAcceptBtn');
+    const declineBtn=document.getElementById('voiceDeclineBtn');
+    const examples=document.querySelectorAll('.voice-example-btn');
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SR){
+        patientRecognition=new SR();
+        patientRecognition.continuous=false;
+        patientRecognition.interimResults=false;
+        patientRecognition.lang = currentUser?currentUser.language:'en-US';
+        patientRecognition.onstart=()=>{
+            patientListening=true;
+            if(statusEl) statusEl.textContent='Listening...';
+            if(startBtn) startBtn.disabled=true;
+            if(stopBtn) stopBtn.disabled=false;
+        };
+        patientRecognition.onend=()=>{
+            patientListening=false;
+            if(statusEl) statusEl.textContent='Idle';
+            if(startBtn) startBtn.disabled=false;
+            if(stopBtn) stopBtn.disabled=true;
+        };
+        patientRecognition.onerror=(e)=>{
+            showToast('Voice error: '+e.error,'error');
+            if(statusEl) statusEl.textContent='Error';
+            patientListening=false;
+        };
+        patientRecognition.onresult=async (e)=>{
+            const transcript=e.results[0][0].transcript;
+            await askAssistant(transcript);
+        };
+    } else {
+        if(statusEl) statusEl.textContent='Voice not supported — tap a question instead';
+    }
+    if(startBtn){
+        startBtn.addEventListener('click', ()=>{
+            if(patientRecognition){
+                if(statusEl) statusEl.textContent='Listening...';
+                if(transEl) transEl.textContent='Listening...';
+                try{ patientRecognition.start(); }catch(err){ showToast(err.message,'error'); }
+            } else {
+                const q=prompt('Type your question:','What is due next?');
+                if(q) askAssistant(q);
+            }
+        });
+    }
+    if(stopBtn){
+        stopBtn.addEventListener('click', ()=>{
+            if(patientRecognition && patientListening) patientRecognition.stop();
+            if(statusEl) statusEl.textContent='Idle';
+        });
+    }
+    if(acceptBtn) acceptBtn.addEventListener('click', ()=>respondToPrompt('accepted'));
+    if(declineBtn) declineBtn.addEventListener('click', ()=>respondToPrompt('declined'));
+    examples.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+            askAssistant(btn.getAttribute('data-q')||'What is due next?');
+        });
+    });
+}
+
 async function loadData(showLoad=true){
     if(showLoad) showLoading();
     try{
@@ -937,6 +1099,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     // Global confirm
     const confirmGlobalBtn=document.getElementById('confirmGlobalBtn');
     if(confirmGlobalBtn) confirmGlobalBtn.addEventListener('click', confirmNextPending);
+
+    // Voice agent button wiring
+    initVoiceAgent();
 
     // Language select already init
     // Load data

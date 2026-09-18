@@ -1,10 +1,9 @@
 import sys, os
 import json
-import urllib.request
-import urllib.error
 from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import database
+import slm
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
@@ -356,65 +355,11 @@ def api_stats():
 
 
 # ---------------------------------------------------------------------------
-# Voice agent (SLM)
-# Uses a real small language model when available, otherwise the frontend
-# falls back to its rule-based matcher (frontend sends source:"rule").
-# Resolution order:
-#   1. MEDREMIND_SLM_URL set  -> hosted OpenAI-compatible chat/completions
-#   2. else                   -> local Ollama at http://localhost:11434
+# Voice agent (SLM) — shared logic lives in slm.py (also bundled per-app for Vercel)
+# Basis of reply (e.g. "What's due next?") answer one of the frontend's rules
+# only when the SLM is unreachable (approach: ask()/fallback in slm.py).
+# Resolution: MEDREMIND_SLM_URL set -> hosted OpenAI-compatible; else local Ollama.
 # ---------------------------------------------------------------------------
-def _voice_agent_context(patient_id):
-    """Build a compact factual summary of today's schedule for the prompt."""
-    user = database.get_user_by_id(patient_id)
-    name = user["name"] or user["username"]
-    lang = user.get("language", "en-US")
-    now = datetime.now()
-    doses = database.get_todays_doses(patient_id)
-    lines = []
-    for d in doses:
-        time_txt = d["time"]
-        if d["taken"]:
-            status = "taken"
-        else:
-            hour, minute = int(time_txt.split(":")[0]), int(time_txt.split(":")[1])
-            status = "missed" if (now.hour, now.minute) > (hour, minute) else "pending"
-        lines.append("- {name} ({dosage}) at {time} — {status}".format(
-            name=d["medicine_name"], dosage=d["dosage"], time=time_txt, status=status))
-    schedule = "\n".join(lines) if lines else "- (no medicines scheduled today)"
-    return name, lang, schedule
-
-
-def _call_slm(prompt, timeout=25):
-    """Call the configured SLM. Returns text or raises on any failure."""
-    url = os.environ.get("MEDREMIND_SLM_URL", "http://localhost:11434/api/generate")
-    api_key = os.environ.get("MEDREMIND_SLM_API_KEY", "")
-    model = os.environ.get("MEDREMIND_SLM_MODEL", "llama3.2")
-
-    openai_style = api_key or "chat/completions" in url
-    if openai_style:
-        payload = json.dumps({
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-        }).encode()
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = "Bearer " + api_key
-    else:
-        payload = json.dumps({"model": model, "prompt": prompt, "stream": False}).encode()
-        headers = {"Content-Type": "application/json"}
-
-    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-
-    if openai_style:
-        content = data["choices"][0]["message"]["content"]
-    else:
-        content = data.get("response", "")
-    return content.strip()
-
-
 @app.route('/api/voice-agent', methods=['POST'])
 @login_required_caregiver
 def api_voice_agent():
@@ -425,28 +370,37 @@ def api_voice_agent():
     text = (data.get('text') or data.get('query') or '').strip()
     if not text:
         return jsonify({"error": "text required"}), 400
+    answer, source = slm.ask(text, pid, tone='caregiver')
+    if answer is None:
+        return jsonify({"source": "rule"}), 200
+    return jsonify({"answer": answer, "source": source}), 200
+
+
+@app.route('/api/adherence', methods=['GET'])
+@login_required_caregiver
+def api_adherence():
+    """Adherence = how the patient responded to SLM prompt suggestions."""
+    pid, err = _get_and_validate_patient_id()
+    if err:
+        return err
     try:
-        name, lang, schedule = _voice_agent_context(pid)
-        prompt = (
-            "You are the voice assistant on a caregiver's medication dashboard. "
-            "Answer in 1-3 short sentences, plain text, no markdown, no emoji. "
-            "Only use the facts below; if the caregiver asks something you don't know, say so briefly.\n"
-            f"Patient: {name} (language: {lang})\n"
-            "Today's schedule:\n"
-            f"{schedule}\n"
-            f"Caregiver asks: \"{text}\"\n"
-            "Answer:"
-        )
-        answer = _call_slm(prompt)
-        if not answer:
-            return jsonify({"source": "rule"}), 200
-        return jsonify({"answer": answer, "source": "slm"}), 200
-    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, ValueError, ConnectionError, TimeoutError) as exc:
-        print(f"Voice agent SLM unavailable, falling back to rules: {exc}")
-        return jsonify({"source": "rule"}), 200
-    except Exception as exc:
-        print(f"Voice agent error, falling back to rules: {exc}")
-        return jsonify({"source": "rule"}), 200
+        history = database.get_slm_interactions(pid, limit=200)
+        counts = {"accepted": 0, "declined": 0, "answered": 0, "unavailable": 0}
+        for row in history:
+            key = row.get("outcome") or "answered"
+            if key in counts:
+                counts[key] += 1
+        total_prompts = counts["accepted"] + counts["declined"]
+        return jsonify({
+            "total": len(history),
+            "accepted": counts["accepted"],
+            "declined": counts["declined"],
+            "answered": counts["answered"],
+            "unavailable": counts["unavailable"],
+            "adherence": round(counts["accepted"] / total_prompts * 100) if total_prompts else None,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/uploads', methods=['POST'])
 @login_required_caregiver
