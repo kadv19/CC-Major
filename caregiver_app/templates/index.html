@@ -4,73 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Caregiver Dashboard - Medication Reminder">
-    <meta name="theme-color" content="#4CAF50">
-    <title>👨‍👩‍👧 Caregiver Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👨‍👩‍👧</text></svg>">
+    <meta name="theme-color" content="#5B7A85">
+    <title>Caregiver Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235B7A85%22 stroke-width=%222%22><circle cx=%2212%22 cy=%228%22 r=%223.5%22/><path d=%22M4 20c0-4 4-6 8-6s8 2 8 6%22/></svg>">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-app="caregiver">
+    <a href="#mainContainer" class="skip-link">Skip to content</a>
     <div id="loadingOverlay" class="loading-overlay" style="display:none;" aria-live="polite" aria-label="Loading">
         <div class="spinner large" aria-hidden="true"></div>
         <p>Loading...</p>
     </div>
-    <div id="offlineIndicator" class="offline-indicator" style="display:none;" role="alert" aria-live="assertive">📡 Offline - using local cache</div>
+    <div id="offlineIndicator" class="offline-indicator" style="display:none;" role="alert" aria-live="assertive">Offline — using your local cache</div>
 
     <div class="container" id="mainContainer">
         <!-- Header -->
         <header class="header" role="banner">
             <div class="header-left">
-                <h1 class="header-title">👨‍👩‍👧 Caregiver Dashboard</h1>
+                <h1 class="header-title"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg>Caregiver Dashboard</h1>
                 <p class="header-subtitle" id="caregiverSubtitle">Caregiver: {{ user.name }} ({{ user.username }})</p>
                 <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                    <span id="offlineBadge" class="badge badge-success">● Online</span>
-                    <span id="apiStatusBadge" class="badge badge-info">API: Checking...</span>
+                    <span id="offlineBadge" class="badge badge-success">Online</span>
+                    <span id="apiStatusBadge" class="badge badge-info">Checking connection...</span>
                     <span id="versionBadge" class="badge badge-warning">v{{ app_version }}</span>
                 </div>
             </div>
             <div class="header-right">
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <button type="button" id="darkModeToggle" class="btn btn-outline btn-sm" aria-label="Toggle dark mode" style="min-height:48px;">🌙 Dark</button>
-                    <a href="/logout" id="logoutBtn" class="btn btn-outline btn-sm" style="min-height:48px; text-decoration:none;">Logout</a>
+                    <button type="button" id="darkModeToggle" class="btn btn-outline btn-sm" aria-label="Toggle dark mode" style="min-height:48px;">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5A9 9 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5z"></path></svg>
+                        <span id="darkModeLabel">Dark</span>
+                    </button>
+                    <a href="/logout" id="logoutBtn" class="btn btn-outline btn-sm" style="min-height:48px; text-decoration:none;">Log out</a>
                 </div>
                 <span class="header-badge" id="caregiverBadge">{{ user.username }} • {{ user.name }}</span>
             </div>
         </header>
 
-        <!-- 1. 🧑 Patients -->
+        <!-- 1. Patients -->
         <section id="patientsSection" class="card" aria-labelledby="patientsTitle">
             <div class="card-header">
-                <h2 id="patientsTitle">🧑 Patients</h2>
+                <h2 id="patientsTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg>Patients</h2>
                 <span id="totalPatients" class="badge badge-info">Total patients: --</span>
             </div>
-            <p class="card-desc">Select a patient to manage their medicines. Buttons show name + username + language flag. New patients appear automatically.</p>
-            <div id="patientSelector" class="patient-selector" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;" aria-live="polite">
-                <!-- Filled by JS: large buttons 48px+ -->
+            <p class="card-desc">Select a patient to manage their medicines. New patients appear here automatically.</p>
+            <div id="patientSelector" class="patient-selector" aria-live="polite">
+                <!-- Filled by JS -->
             </div>
             <div id="addPatientWrap" style="margin-top:12px;">
                 <button type="button" id="toggleAddPatientBtn" class="btn btn-primary" aria-label="Add a new patient" aria-expanded="false" style="min-height:48px; width:100%;">
-                    ➕ Add New Patient
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                    <span id="toggleAddPatientLabel">Add a new patient</span>
                 </button>
-                <form id="addPatientForm" style="display:none; margin-top:10px; background:var(--gray-50); border:1px solid var(--gray-300); border-radius:8px; padding:14px;" aria-label="Add new patient form" novalidate>
+                <form id="addPatientForm" style="display:none; margin-top:10px; background:var(--gray-50); border:1px solid var(--gray-300); border-radius:var(--radius-sm); padding:16px;" aria-label="Add new patient form" novalidate>
                     <div class="form-row">
                         <div class="form-group" style="flex:1;">
-                            <label for="newPatientName">Full Name *</label>
+                            <label for="newPatientName">Full name *</label>
                             <input type="text" id="newPatientName" placeholder="e.g., Sunitha" required autocomplete="off">
                         </div>
                         <div class="form-group" style="flex:1;">
                             <label for="newPatientUsername">Username *</label>
                             <input type="text" id="newPatientUsername" placeholder="e.g., patient6" required autocomplete="off" aria-describedby="usernameHelp">
-                            <small id="usernameHelp">Used to log in on the patient website (port 5001)</small>
+                            <small id="usernameHelp">Used to log in on the patient website</small>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group" style="flex:1;">
                             <label for="newPatientPassword">Password * (min 4 characters)</label>
-                            <input type="password" id="newPatientPassword" placeholder="Enter a simple password" required autocomplete="new-password">
+                            <input type="password" id="newPatientPassword" placeholder="Choose a simple password" required autocomplete="new-password">
                         </div>
                         <div class="form-group" style="flex:1;">
-                            <label for="newPatientLanguage">Reminder Language</label>
+                            <label for="newPatientLanguage">Reminder language</label>
                             <select id="newPatientLanguage" aria-label="Patient reminder language">
                                 <option value="en-US">English (en-US)</option>
                                 <option value="hi-IN">हिन्दी (hi-IN)</option>
@@ -79,31 +84,31 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
-                        <button type="submit" class="btn btn-success" style="min-height:48px;">✅ Create Patient</button>
-                        <button type="button" id="cancelAddPatientBtn" class="btn btn-outline" style="min-height:48px;">✕ Cancel</button>
+                        <button type="submit" class="btn btn-success" style="min-height:48px;">Create patient</button>
+                        <button type="button" id="cancelAddPatientBtn" class="btn btn-outline" style="min-height:48px;">Cancel</button>
                     </div>
                 </form>
             </div>
-            <div id="activePatientInfo" style="margin-top:12px; padding:10px; background:var(--green-light); border-radius:8px; text-align:center; font-weight:600;">
+            <div id="activePatientInfo" class="caregiver-info" style="margin-top:12px; text-align:center; font-weight:600;">
                 No patient selected
             </div>
         </section>
 
         <div class="dashboard-grid">
-            <!-- 2. 📄 Prescription Upload (Mock OCR) -->
+            <!-- 2. Prescription Upload (Mock OCR) -->
             <section id="uploadSection" class="card" aria-labelledby="uploadTitle">
                 <div class="card-header">
-                    <h2 id="uploadTitle">📄 Prescription Upload (Mock OCR)</h2>
+                    <h2 id="uploadTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="M4 15l4-4 4 4 4-6 4 4"></path></svg>Prescription upload</h2>
                     <span class="badge badge-info">Mock OCR • Offline</span>
                 </div>
-                <p class="card-desc">Upload prescription image (JPG/PNG, max 5MB). Drag & drop or click to browse. Mock OCR extracts medicines offline.</p>
+                <p class="card-desc">Upload a prescription photo (JPG/PNG, up to 5MB) and we'll pull out the medicines automatically. Review before adding — this reads keywords offline, so it isn't perfect.</p>
                 <div class="upload-dropzone" id="dropZone" role="button" tabindex="0" aria-label="Upload prescription drop zone">
-                    <div class="upload-icon" aria-hidden="true">📤</div>
-                    <p class="upload-text"><strong>Drag & drop</strong> prescription here</p>
-                    <p class="upload-subtext">or click to browse</p>
+                    <div class="upload-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg></div>
+                    <p class="upload-text"><strong>Drag and drop</strong> a prescription here</p>
+                    <p class="upload-subtext">or click below to browse</p>
                     <input type="file" id="prescriptionFile" accept="image/jpeg,image/png,image/jpg" hidden aria-label="Prescription file input">
-                    <button type="button" class="btn btn-outline" id="browseBtn" aria-label="Browse prescription files">Browse Files</button>
-                    <p class="upload-hint">Supports: JPG, PNG • Max 5MB • Offline • Mock OCR</p>
+                    <button type="button" class="btn btn-outline" id="browseBtn" aria-label="Browse prescription files">Browse files</button>
+                    <p class="upload-hint">JPG or PNG • up to 5MB</p>
                 </div>
                 <div class="upload-preview" id="uploadPreview" style="display:none;">
                     <img src="" alt="Prescription preview" id="previewImage" loading="lazy">
@@ -112,43 +117,45 @@
                         <p id="previewSize" style="font-size:0.75rem;color:var(--gray-500);"></p>
                     </div>
                     <div class="upload-actions" id="uploadActions" style="display:none; margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-                        <button type="button" class="btn btn-primary btn-sm" id="analyzeBtn" aria-label="Analyze prescription with mock OCR">🔍 Analyze</button>
-                        <button type="button" class="btn btn-outline btn-sm" id="clearUploadBtn" aria-label="Clear upload">🗑️ Clear</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="analyzeBtn" aria-label="Analyze prescription with mock OCR">
+                            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>Analyze
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" id="clearUploadBtn" aria-label="Clear upload">Clear</button>
                     </div>
                 </div>
                 <div id="ocrProcessing" class="ocr-processing" style="display:none;" aria-live="polite">
                     <div class="spinner" aria-hidden="true"></div>
-                    <p><strong>Analyzing prescription...</strong></p>
-                    <p class="ocr-sub">Mock OCR • Keyword matching • Offline</p>
+                    <p><strong>Reading the prescription...</strong></p>
+                    <p class="ocr-sub">This takes just a moment</p>
                 </div>
                 <div id="ocrResults" class="ocr-results" style="display:none;" aria-live="polite">
-                    <h4 style="font-size:1rem; margin-bottom:8px;">📋 Extracted Medicines (Mock OCR)</h4>
-                    <p class="card-desc" style="margin-bottom:8px;">Review and edit before adding.</p>
+                    <h4 style="font-size:1rem; margin-bottom:8px;">Here's what we found</h4>
+                    <p class="card-desc" style="margin-bottom:8px;">Have a look and fix anything before adding it to the schedule.</p>
                     <div id="extractedList" class="extracted-list" role="list"></div>
                     <div class="ocr-results-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-                        <button type="button" class="btn btn-success btn-sm" id="addExtractedBtn" aria-label="Add all extracted medicines">➕ Add All to Schedule</button>
-                        <button type="button" class="btn btn-outline btn-sm" id="discardOcrBtn" aria-label="Discard OCR results">✕ Discard</button>
+                        <button type="button" class="btn btn-success btn-sm" id="addExtractedBtn" aria-label="Add all extracted medicines">Add all to schedule</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="discardOcrBtn" aria-label="Discard OCR results">Discard</button>
                     </div>
                 </div>
                 <div id="uploadHistory" class="upload-history" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--gray-100);">
-                    <h4 style="font-size:0.95rem; margin-bottom:8px;">📚 Upload History</h4>
+                    <h4 style="font-size:0.95rem; margin-bottom:8px;">Upload history</h4>
                     <div id="uploadHistoryList" class="upload-history-list" aria-live="polite">
                         <p class="empty-history" style="color:var(--gray-500); font-size:0.85rem; text-align:center; padding:8px;">No uploads yet</p>
                     </div>
-                    <button type="button" class="btn btn-outline btn-sm" id="clearHistoryBtn" style="margin-top:8px;" aria-label="Clear upload history">Clear History</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="clearHistoryBtn" style="margin-top:8px;" aria-label="Clear upload history">Clear history</button>
                 </div>
             </section>
 
-            <!-- 3. ➕ Add Medicine Schedule -->
+            <!-- 3. Add Medicine Schedule -->
             <section id="addMedicineForm" class="card" aria-labelledby="formTitle">
                 <div class="card-header">
-                    <h2 id="formTitle">➕ Add Medicine Schedule</h2>
-                    <span class="badge badge-success">Per Patient</span>
+                    <h2 id="formTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="8" rx="4"></rect><path d="M12 10v8"></path></svg>Add a medicine</h2>
+                    <span class="badge badge-success">Per patient</span>
                 </div>
                 <p class="card-desc" id="addMedicineDesc">For: <strong id="addMedicinePatientName">No patient selected</strong></p>
                 <form id="medicineForm" class="medicine-form" onsubmit="return false;" aria-label="Add medicine form" novalidate>
                     <div class="form-group">
-                        <label for="medicineName">Medicine Name *</label>
+                        <label for="medicineName">Medicine name *</label>
                         <input type="text" id="medicineName" placeholder="e.g., Metformin" required aria-required="true" autocomplete="off">
                     </div>
                     <div class="form-row">
@@ -163,7 +170,7 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="medicineLanguage">Reminder Language</label>
+                            <label for="medicineLanguage">Reminder language</label>
                             <select id="medicineLanguage" aria-label="Reminder language">
                                 <option value="en-US">English (en-US)</option>
                                 <option value="hi-IN">हिन्दी (hi-IN)</option>
@@ -171,41 +178,41 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="medicineTimes">Additional Times</label>
-                            <input type="text" id="medicineTimes" placeholder="e.g., 14:00, 20:00 (comma separated)" autocomplete="off" aria-label="Additional times comma separated">
-                            <small>Optional: Add more times</small>
+                            <label for="medicineTimes">Additional times</label>
+                            <input type="text" id="medicineTimes" placeholder="e.g., 14:00, 20:00" autocomplete="off" aria-label="Additional times comma separated">
+                            <small>Optional — separate with commas</small>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block" id="addMedicineBtn" aria-label="Add medicine to schedule" style="min-height:48px;">➕ Add Medicine</button>
-                    <p class="form-note">Data saved for active patient • Offline ready</p>
+                    <button type="submit" class="btn btn-primary btn-block" id="addMedicineBtn" aria-label="Add medicine to schedule" style="min-height:48px;">Add medicine</button>
+                    <p class="form-note">Saved for the active patient, works offline too</p>
                 </form>
             </section>
         </div>
 
-        <!-- 4. 📅 Today's Schedule -->
+        <!-- 4. Today's Schedule -->
         <section id="scheduleDisplay" class="card" aria-labelledby="scheduleTitle">
             <div class="card-header">
-                <h2 id="scheduleTitle">📅 Today's Schedule (No patient)</h2>
+                <h2 id="scheduleTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>Today's schedule (No patient)</h2>
                 <div class="schedule-meta">
                     <span id="todayDate" class="badge badge-info">Today • --</span>
-                    <span id="doseCount" class="badge badge-warning">0 Doses</span>
+                    <span id="doseCount" class="badge badge-warning">0 doses</span>
                 </div>
             </div>
-            <p class="card-desc">Track <strong>Pending / Taken / Missed</strong> status.</p>
+            <p class="card-desc">Track what's <strong>pending, taken, or missed</strong> across the day.</p>
             <div id="nextDoseDisplay" class="next-dose-display" aria-live="polite">
-                <span class="next-dose-label">⏰ Next dose:</span>
+                <span class="next-dose-label"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>Next dose:</span>
                 <span id="nextDoseText">Select a patient</span>
                 <span id="nextDoseRelative" class="relative-time"></span>
             </div>
             <div class="schedule-filters" id="scheduleFilters" role="group" aria-label="Schedule filters">
-                <button class="filter-btn active" data-filter="today" aria-pressed="true">📅 Today</button>
-                <button class="filter-btn" data-filter="all" aria-pressed="false">📋 All</button>
-                <button class="filter-btn" data-filter="pending" aria-pressed="false">⏳ Pending</button>
-                <button class="filter-btn" data-filter="taken" aria-pressed="false">✅ Taken</button>
-                <button class="filter-btn" data-filter="missed" aria-pressed="false">❌ Missed</button>
+                <button class="filter-btn active" data-filter="today" aria-pressed="true">Today</button>
+                <button class="filter-btn" data-filter="all" aria-pressed="false">All</button>
+                <button class="filter-btn" data-filter="pending" aria-pressed="false">Pending</button>
+                <button class="filter-btn" data-filter="taken" aria-pressed="false">Taken</button>
+                <button class="filter-btn" data-filter="missed" aria-pressed="false">Missed</button>
             </div>
             <div class="timeline-view" id="timelineView" aria-label="24 hour timeline view">
-                <div class="timeline-header">24-Hour Timeline <small>(color dots = dose status)</small></div>
+                <div class="timeline-header">24-hour timeline <small>(dots show dose status)</small></div>
                 <div class="timeline-bar" id="timelineBar" role="img" aria-label="Timeline bar showing doses over 24 hours"></div>
                 <div class="timeline-legend">
                     <span><i class="timeline-dot pending" aria-hidden="true"></i> Pending</span>
@@ -217,11 +224,11 @@
             <div class="schedule-grid" id="scheduleList" aria-live="polite"></div>
         </section>
 
-        <!-- 5. 📊 Compliance -->
+        <!-- 5. Compliance -->
         <section id="complianceSection" class="card caregiver-card" aria-labelledby="complianceTitle">
             <div class="card-header">
-                <h2 id="complianceTitle">📊 Compliance (No patient)</h2>
-                <span class="badge badge-success">Today's Overview</span>
+                <h2 id="complianceTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M12 20V4M20 20v-7"></path></svg>Compliance (No patient)</h2>
+                <span class="badge badge-success">Today's overview</span>
             </div>
             <div class="compliance-stats">
                 <div class="stat-box stat-taken">
@@ -240,96 +247,100 @@
             <div class="compliance-stats">
                 <div class="stat-box stat-upcoming">
                     <span class="stat-number" id="statUpcoming">0</span>
-                    <span class="stat-label">📆 Upcoming</span>
+                    <span class="stat-label">Upcoming</span>
                 </div>
                 <div class="stat-box stat-overdue">
                     <span class="stat-number" id="statOverdue">0</span>
-                    <span class="stat-label">⏰ Overdue</span>
+                    <span class="stat-label">Overdue</span>
                 </div>
-                <div class="stat-box" style="background:white;border:1px solid var(--blue);">
-                    <span class="stat-number" id="statNextDose" style="font-size:1.0rem;color:var(--blue);">--</span>
-                    <span class="stat-label">Next Dose</span>
+                <div class="stat-box" style="background:var(--white);border:1px solid var(--blue);">
+                    <span class="stat-number" id="statNextDose" style="font-size:1.0rem;color:var(--blue-dark);">--</span>
+                    <span class="stat-label">Next dose</span>
                 </div>
             </div>
             <div class="compliance-bar-wrapper">
                 <div class="compliance-bar-header">
-                    <span>Compliance Today</span>
+                    <span>Compliance today</span>
                     <span id="complianceText"><strong>0%</strong> (0/0 taken)</span>
                 </div>
                 <div class="compliance-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-labelledby="complianceText">
                     <div class="compliance-fill" id="complianceFill" style="width: 0%;"></div>
                 </div>
-                <p class="compliance-note">Goal: 100% • Missed doses notified to caregiver</p>
+                <p class="compliance-note">Missed doses are flagged here so nothing slips through</p>
             </div>
         </section>
 
-        <!-- 6. ⚡ Quick Actions -->
+        <!-- 6. Quick Actions -->
         <section id="quickActions" class="card" aria-labelledby="quickTitle">
             <div class="card-header">
-                <h2 id="quickTitle">⚡ Quick Actions</h2>
+                <h2 id="quickTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z"></path></svg>Quick actions</h2>
                 <span class="badge badge-info" id="quickPatientBadge">No patient</span>
             </div>
-            <p class="card-desc">Per-patient actions for <strong id="quickPatientName">No patient</strong></p>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
-                <button type="button" class="btn btn-success" id="quickMarkAllBtn" aria-label="Mark all pending as taken" style="min-height:48px;">✅ Mark All Taken</button>
-                <button type="button" class="btn btn-primary" id="quickSpeakAllBtn" aria-label="Speak all pending reminders" style="min-height:48px;">🔊 Speak All Pending</button>
-                <button type="button" class="btn btn-outline" id="quickStatsBtn" aria-label="Show compliance stats" style="min-height:48px;">📊 Stats</button>
-                <button type="button" class="btn btn-primary" id="loadDemoBtn" aria-label="Load demo data for patient" style="min-height:48px;">🚀 Load Demo</button>
-                <button type="button" class="btn btn-outline" id="resetDemoBtn" aria-label="Reset demo data for patient" style="min-height:48px;">🔄 Reset Demo</button>
+            <p class="card-desc">Shortcuts for <strong id="quickPatientName">No patient</strong></p>
+            <div class="quick-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+                <button type="button" class="btn btn-success" id="quickMarkAllBtn" aria-label="Mark all pending as taken" style="min-height:48px;">Mark all taken</button>
+                <button type="button" class="btn btn-primary" id="quickSpeakAllBtn" aria-label="Speak all pending reminders" style="min-height:48px;">Speak all pending</button>
+                <button type="button" class="btn btn-outline" id="quickStatsBtn" aria-label="Show compliance stats" style="min-height:48px;">Show stats</button>
+                <button type="button" class="btn btn-primary" id="loadDemoBtn" aria-label="Load demo data for patient" style="min-height:48px;">Load demo data</button>
+                <button type="button" class="btn btn-outline" id="resetDemoBtn" aria-label="Reset demo data for patient" style="min-height:48px;">Reset demo data</button>
             </div>
         </section>
 
-        <!-- 7. 📜 Dose History -->
+        <!-- 7. Dose History -->
         <section id="historyLog" class="card" aria-labelledby="historyTitle">
             <div class="card-header">
-                <h2 id="historyTitle">📜 Dose History (No patient)</h2>
-                <span class="badge badge-info">Last 7 Days</span>
+                <h2 id="historyTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"></path><path d="M12 7v5l3 3"></path></svg>Dose history (No patient)</h2>
+                <span class="badge badge-info">Last 7 days</span>
             </div>
-            <p class="card-desc">Log of all doses - Taken / Missed timeline for active patient.</p>
+            <p class="card-desc">A log of taken and missed doses for the active patient.</p>
             <div class="history-list" id="historyList" aria-live="polite"></div>
         </section>
 
-        <!-- 8. 🎤 Voice Agent -->
+        <!-- 8. Voice Agent -->
         <section id="voiceAgent" class="card" aria-labelledby="voiceTitle">
             <div class="card-header">
-                <h2 id="voiceTitle">🎤 Voice Agent</h2>
+                <h2 id="voiceTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>Voice agent</h2>
                 <span class="badge badge-success">Ask about <span id="voicePatientName">patient</span></span>
             </div>
-            <p class="card-desc">Ask about <span id="voiceDescPatient">selected patient</span>'s medication status. Speech-to-text transcribes, looks up schedule, and speaks answer in patient's language.</p>
-            <div class="voice-agent-container" style="display:flex; flex-direction:column; gap:12px; padding:12px; background:var(--gray-50); border-radius:var(--radius-sm); border:1px solid var(--gray-300);">
+            <p class="card-desc">Ask about <span id="voiceDescPatient">selected patient</span>'s medication status out loud — it listens, checks the schedule, and answers back.</p>
+            <div class="voice-agent-container">
                 <div class="voice-input-area" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <button type="button" id="voiceStartBtn" class="btn btn-primary" style="min-height:48px; flex:1; min-width:120px;">🎤 Start Listening</button>
-                    <button type="button" id="voiceStopBtn" class="btn btn-outline" style="min-height:48px;" disabled>⏹️ Stop</button>
+                    <button type="button" id="voiceStartBtn" class="btn btn-primary" style="min-height:48px; flex:1; min-width:120px;">
+                        <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>Start listening
+                    </button>
+                    <button type="button" id="voiceStopBtn" class="btn btn-outline" style="min-height:48px;" disabled>
+                        <svg class="icon" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>Stop
+                    </button>
                     <span id="voiceStatus" class="badge badge-info" style="font-size:0.85rem; padding:6px 12px;">Idle</span>
                 </div>
-                <div class="voice-transcription" style="padding:10px; background:white; border-radius:var(--radius-sm); border:1px solid var(--gray-200); min-height:50px;">
-                    <p style="margin:0; font-size:0.90rem; color:var(--gray-500);">
-                        <span id="voiceTranscription">👂 I'm listening... (click Start and speak)</span>
+                <div class="voice-transcription">
+                    <p>
+                        <span id="voiceTranscription">Listening — press Start and ask your question.</span>
                     </p>
                 </div>
-                <div class="voice-response" style="padding:10px; background:var(--green-light); border-radius:var(--radius-sm); border:1px solid #A5D6A7; min-height:50px;">
-                    <p style="margin:0; font-size:0.90rem; color:var(--green-dark);">
-                        <span id="voiceResponse">🤖 Agent response will appear here</span>
+                <div class="voice-response">
+                    <p>
+                        <span id="voiceResponse">The answer will appear here.</span>
                     </p>
                 </div>
-                <div class="voice-examples" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.80rem;">
+                <div class="voice-examples" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.80rem; align-items:center;">
                     <span style="font-weight:600; color:var(--gray-700);">Try asking:</span>
-                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="morning">🌅 Morning medicine?</button>
-                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="next">⏰ Next dose?</button>
-                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="missed">❌ Missed any?</button>
-                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="summary">📊 Summary?</button>
+                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="morning">Morning medicine?</button>
+                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="next">Next dose?</button>
+                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="missed">Missed any?</button>
+                    <button class="btn btn-outline btn-sm voice-example-btn" data-question="summary">Summary?</button>
                 </div>
             </div>
             <small style="color:var(--gray-500);font-size:0.72rem;display:block;margin-top:8px;">
-                🎤 Uses browser <strong>SpeechRecognition API</strong> (Chrome best) — no cloud, no API keys.
+                Uses your browser's built-in speech recognition (works best in Chrome) — nothing is sent to the cloud.
             </small>
         </section>
 
         <!-- 9. Footer -->
         <footer class="footer" role="contentinfo">
             <p id="footerVersion">v1.0.0 • Caregiver Dashboard</p>
-            <p>Designed for elderly care • Kannada / Hindi / English</p>
-            <p style="margin-top:6px;"><a href="/health" target="_blank" style="color:var(--gray-500);">Health</a> • <a href="/logout" style="color:var(--gray-500);">Logout</a></p>
+            <p>Made for elderly care • Kannada / Hindi / English</p>
+            <p style="margin-top:6px;"><a href="/health" target="_blank">Health</a> • <a href="/logout">Log out</a></p>
         </footer>
     </div>
 

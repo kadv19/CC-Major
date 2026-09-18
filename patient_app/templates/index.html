@@ -4,105 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Patient Medication Reminder - Elderly Care">
-    <meta name="theme-color" content="#4CAF50">
-    <title>💊 My Medicines - Patient</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💊</text></svg>">
+    <meta name="theme-color" content="#BE6A3E">
+    <title>My Medicines - Patient</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23BE6A3E%22 stroke-width=%222%22><rect x=%224%22 y=%2210%22 width=%2216%22 height=%228%22 rx=%224%22/><path d=%22M12 10v8%22/></svg>">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-app="patient">
+    <a href="#mainContainer" class="skip-link">Skip to content</a>
     <div id="loadingOverlay" class="loading-overlay" style="display:none;" aria-live="polite" aria-label="Loading">
         <div class="spinner large" aria-hidden="true"></div>
         <p>Loading...</p>
     </div>
-    <div id="offlineIndicator" class="offline-indicator" style="display:none;" role="alert" aria-live="assertive">📡 Offline - using local cache</div>
+    <div id="offlineIndicator" class="offline-indicator" style="display:none;" role="alert" aria-live="assertive">Offline — showing your last saved schedule</div>
 
     <div class="container" id="mainContainer">
         <!-- Header -->
         <header class="header" role="banner">
             <div class="header-left">
-                <h1 id="greeting" class="header-title">👋 Namaste, {{ user.name }}</h1>
+                <h1 id="greeting" class="header-title">Namaste, {{ user.name }}</h1>
                 <p class="header-subtitle" id="headerSubtitle">My Medicines • Patient App</p>
                 <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                    <span id="offlineBadge" class="badge badge-success">● Online</span>
-                    <span id="apiStatusBadge" class="badge badge-info">API: Checking...</span>
+                    <span id="offlineBadge" class="badge badge-success">Online</span>
+                    <span id="apiStatusBadge" class="badge badge-info">Checking connection...</span>
                 </div>
             </div>
             <div class="header-right">
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <select id="languageSelect" class="language-select" aria-label="Select language" style="min-height:48px;">
-                        <option value="en-US">🇬🇧 English (en-US)</option>
-                        <option value="hi-IN">🇮🇳 हिन्दी (hi-IN)</option>
-                        <option value="kn-IN">🇮🇳 ಕನ್ನಡ (kn-IN)</option>
+                    <select id="languageSelect" class="language-select" aria-label="Select language" style="min-height:48px; width:auto;">
+                        <option value="en-US">English</option>
+                        <option value="hi-IN">हिन्दी</option>
+                        <option value="kn-IN">ಕನ್ನಡ</option>
                     </select>
-                    <button type="button" id="darkModeToggle" class="btn btn-outline btn-sm" aria-label="Toggle dark mode" title="Toggle dark mode" style="min-height:48px;">🌙 Dark</button>
-                    <a href="/logout" id="logoutBtn" class="btn btn-outline btn-sm" style="min-height:48px; text-decoration:none;">Logout</a>
+                    <button type="button" id="darkModeToggle" class="btn btn-outline btn-sm" aria-label="Toggle dark mode" title="Toggle dark mode" style="min-height:48px;">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.5A9 9 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5z"></path></svg>
+                        <span id="darkModeLabel">Dark</span>
+                    </button>
+                    <a href="/logout" id="logoutBtn" class="btn btn-outline btn-sm" style="min-height:48px; text-decoration:none;">Log out</a>
                 </div>
                 <span class="header-badge" id="userBadge">{{ user.username }} • {{ user.name }}</span>
             </div>
         </header>
 
-        <!-- 📅 Today's Doses -->
+        <!-- Today's Doses -->
         <section id="scheduleSection" class="card" aria-labelledby="scheduleTitle">
             <div class="card-header">
-                <h2 id="scheduleTitle">📅 Today's Doses</h2>
+                <h2 id="scheduleTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>Today's Doses</h2>
                 <div class="schedule-meta">
-                    <span id="todayLabel" class="badge badge-info">📅 Today, --</span>
+                    <span id="todayLabel" class="badge badge-info">Today, --</span>
                     <span id="doseCountBadge" class="badge badge-warning">0 Doses</span>
                 </div>
             </div>
             <div id="nextDoseBanner" class="next-dose-display" aria-live="polite">
-                <span class="next-dose-label">⏰ Next dose:</span>
+                <span class="next-dose-label"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>Your next one:</span>
                 <span id="nextDoseText">No doses scheduled</span>
                 <span id="nextDoseRelative" class="relative-time"></span>
             </div>
             <!-- Time-grouped schedule grid -->
             <div id="scheduleGrid" class="schedule-grid" aria-live="polite"></div>
             <div id="scheduleEmpty" class="empty-state" style="display:none;">
-                <div class="empty-icon">💊</div>
-                <h3>No medicines scheduled</h3>
-                <p>Caregiver will add medicines for you.</p>
+                <div class="empty-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="4"></rect><path d="M12 10v8"></path></svg></div>
+                <h3>No medicines here yet</h3>
+                <p>Your care team will add them soon.</p>
             </div>
 
             <!-- Confirmation area: global IoT button -->
             <div class="confirmation-area" id="confirmationArea" style="margin-top:16px;">
-                <p><strong>Did you take your medicine?</strong> Press the button below.</p>
-                <button class="btn btn-primary btn-block" type="button" id="confirmGlobalBtn" aria-label="Confirm dose taken via IoT button" style="min-height:56px; font-size:1.15rem; font-weight:700;">✅ Confirm Dose Taken (IoT Button)</button>
+                <p><strong>Just taken your medicine?</strong> Press the button below to let us know.</p>
+                <button class="btn btn-primary btn-block" type="button" id="confirmGlobalBtn" aria-label="Confirm dose taken via IoT button" style="min-height:56px; font-size:1.1rem;">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+                    I took it
+                </button>
             </div>
         </section>
 
-        <!-- 🔊 Speaker -->
+        <!-- Speaker -->
         <section id="speakerSection" class="card" aria-labelledby="speakerTitle">
             <div class="card-header">
-                <h2 id="speakerTitle">🔊 Speaker</h2>
-                <span class="badge badge-success">Voice Reminder</span>
+                <h2 id="speakerTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7"></path><path d="M19.2 6a9 9 0 0 1 0 12"></path></svg>Speaker</h2>
+                <span class="badge badge-success">Voice reminder</span>
             </div>
+            <p class="card-desc">Hear reminders spoken out loud, in the language that's easiest to understand.</p>
             <div class="form-group">
-                <label for="ttsText">Reminder Message Preview</label>
+                <label for="ttsText">What it will say</label>
                 <textarea id="ttsText" rows="3" aria-label="TTS preview text" style="min-height:70px; font-family: inherit;">Time to take your medicine - Metformin 1 tablet. ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುವ ಸಮಯ! मेडिसिन लेने का समय!</textarea>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="ttsVoice">Voice Language</label>
+                    <label for="ttsVoice">Voice language</label>
                     <select id="ttsVoice" aria-label="TTS voice language" style="min-height:48px;">
-                        <option value="en-US">🇬🇧 English - en-US</option>
-                        <option value="hi-IN">🇮🇳 Hindi - hi-IN</option>
-                        <option value="kn-IN">🇮🇳 Kannada - kn-IN</option>
+                        <option value="en-US">English</option>
+                        <option value="hi-IN">हिन्दी (Hindi)</option>
+                        <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
                     </select>
                     <small id="voiceStatus" style="margin-top:4px;display:block;" aria-live="polite">Checking voices...</small>
                 </div>
                 <div class="form-group">
-                    <label for="volumeSlider">🔊 Volume: <span id="volumeValue">100%</span></label>
+                    <label for="volumeSlider">Volume: <span id="volumeValue">100%</span></label>
                     <input type="range" id="volumeSlider" min="0" max="100" value="100" step="5" aria-label="Volume slider">
                 </div>
                 <div class="form-group">
-                    <label for="speedSlider">⚡ Speed: <span id="speedValue">0.9</span>x</label>
+                    <label for="speedSlider">Speed: <span id="speedValue">0.9</span>x</label>
                     <input type="range" id="speedSlider" min="0.5" max="2.0" value="0.9" step="0.1" aria-label="Speech speed slider">
                 </div>
             </div>
             <!-- waveform -->
             <div class="speaker-visual" id="speakerVisual" role="img" aria-label="Speaker visual feedback">
-                <div class="speaker-icon" id="speakerIcon" aria-hidden="true">🔊</div>
+                <div class="speaker-icon" id="speakerIcon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7"></path></svg></div>
                 <div class="speaker-waveform" id="speakerWaveform" aria-hidden="true">
                     <span class="wave-bar"></span>
                     <span class="wave-bar"></span>
@@ -113,56 +121,62 @@
                 <span class="speaker-status" id="speakerStatus" aria-live="polite">Ready</span>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-primary" type="button" id="playBtn" aria-label="Play reminder" style="min-height:48px; flex:1;">▶️ Play Reminder</button>
-                <button class="btn btn-success" type="button" id="speakAllBtn" aria-label="Speak all pending" style="min-height:48px; flex:1;">🔊 Speak All Pending</button>
-                <button class="btn btn-outline" type="button" id="stopBtn" aria-label="Stop speaking" style="min-height:48px;">⏹️ Stop</button>
+                <button class="btn btn-primary" type="button" id="playBtn" aria-label="Play reminder" style="min-height:48px; flex:1;">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7V5z"></path></svg>Play reminder
+                </button>
+                <button class="btn btn-success" type="button" id="speakAllBtn" aria-label="Speak all pending" style="min-height:48px; flex:1;">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"></path><path d="M16.5 8.5a5 5 0 0 1 0 7"></path></svg>Speak all pending
+                </button>
+                <button class="btn btn-outline" type="button" id="stopBtn" aria-label="Stop speaking" style="min-height:48px;">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>Stop
+                </button>
             </div>
         </section>
 
-        <!-- 💡 LED Simulation -->
+        <!-- LED Simulation -->
         <section id="ledSection" class="card" aria-labelledby="ledTitle">
             <div class="card-header">
-                <h2 id="ledTitle">💡 LED Simulation</h2>
-                <span class="badge badge-warning">IoT Device</span>
+                <h2 id="ledTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"></path><path d="M12 3a6 6 0 0 0-4 10.5c.6.6.9 1 .9 1.8V16h6.2v-.7c0-.8.3-1.2.9-1.8A6 6 0 0 0 12 3z"></path></svg>LED Lights</h2>
+                <span class="badge badge-warning">On the device</span>
             </div>
-            <p class="card-desc">Each dose has an LED: Yellow slow blink = Pending, Fast yellow blink = Due now (≤5 min), Green = Taken, Red = Missed.</p>
+            <p class="card-desc">Each dose has its own light: a slow amber glow means it's coming up, a fast glow means it's due now, green means done, and red means it was missed.</p>
             <div class="led-container" id="ledContainer" aria-live="polite"></div>
             <div class="led-legend">
-                <span><i class="led-dot led-pending" aria-hidden="true"></i> Pending (Slow Blink)</span>
-                <span><i class="led-dot led-due-now" aria-hidden="true"></i> Due Now (Fast Blink)</span>
-                <span><i class="led-dot led-taken" aria-hidden="true"></i> Taken (Green)</span>
-                <span><i class="led-dot led-missed" aria-hidden="true"></i> Missed (Red)</span>
+                <span><i class="led-dot led-pending" aria-hidden="true"></i> Pending (slow glow)</span>
+                <span><i class="led-dot led-due-now" aria-hidden="true"></i> Due now (fast glow)</span>
+                <span><i class="led-dot led-taken" aria-hidden="true"></i> Taken</span>
+                <span><i class="led-dot led-missed" aria-hidden="true"></i> Missed</span>
             </div>
         </section>
 
-        <!-- 🔔 Buzzer Simulation -->
+        <!-- Buzzer Simulation -->
         <section id="buzzerSection" class="card" aria-labelledby="buzzerTitle">
             <div class="card-header">
-                <h2 id="buzzerTitle">🔔 Buzzer Simulation</h2>
-                <span class="badge badge-warning">IoT Device</span>
+                <h2 id="buzzerTitle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>Buzzer</h2>
+                <span class="badge badge-warning">On the device</span>
             </div>
-            <p class="card-desc">Buzzer buzzes when reminder is active. Faster when due now. Mute persists.</p>
+            <p class="card-desc">The buzzer sounds gently while a reminder is active, and a little quicker once it's due. Muting it stays remembered.</p>
             <div class="buzzer-wrapper">
                 <div class="buzzer-visual" id="buzzerVisual" role="img" aria-label="Buzzer status visual">
-                    <div class="buzzer-icon" aria-hidden="true">🔔</div>
+                    <div class="buzzer-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg></div>
                     <div class="buzzer-wave wave1" aria-hidden="true"></div>
                     <div class="buzzer-wave wave2" aria-hidden="true"></div>
                     <div class="buzzer-wave wave3" aria-hidden="true"></div>
                 </div>
-                <p class="buzzer-label" id="buzzerLabel">Idle - No Reminder</p>
-                <p class="buzzer-sub" id="buzzerSub">Shows buzzing when pending doses exist • Web Audio beep 440Hz</p>
+                <p class="buzzer-label" id="buzzerLabel">Idle — no reminder</p>
+                <p class="buzzer-sub" id="buzzerSub">Sounds while doses are pending</p>
             </div>
             <div class="buzzer-controls">
-                <button class="btn btn-warning btn-sm" type="button" id="buzzerTestBtn" aria-label="Test buzzer" style="min-height:48px;">🔔 Test Buzzer</button>
-                <button class="btn btn-outline btn-sm" type="button" id="buzzerStopBtn" aria-label="Stop buzzer" style="min-height:48px;">🔕 Stop</button>
-                <button class="btn btn-outline btn-sm" type="button" id="buzzerMuteBtn" aria-label="Mute buzzer" style="min-height:48px;">🔇 Mute</button>
+                <button class="btn btn-warning btn-sm" type="button" id="buzzerTestBtn" aria-label="Test buzzer" style="min-height:48px;">Test buzzer</button>
+                <button class="btn btn-outline btn-sm" type="button" id="buzzerStopBtn" aria-label="Stop buzzer" style="min-height:48px;">Stop</button>
+                <button class="btn btn-outline btn-sm" type="button" id="buzzerMuteBtn" aria-label="Mute buzzer" style="min-height:48px;">Mute</button>
             </div>
         </section>
 
         <footer class="footer" role="contentinfo">
             <p id="footerVersion">v1.0.0 • Patient Reminder</p>
-            <p>Designed for elderly care • Kannada / Hindi / English</p>
-            <p style="margin-top:6px;"><a href="/health" target="_blank" style="color:var(--gray-500);">Health</a> • <a href="/logout" style="color:var(--gray-500);">Logout</a></p>
+            <p>Made for easy reading • Kannada / Hindi / English</p>
+            <p style="margin-top:6px;"><a href="/health" target="_blank">Health</a> • <a href="/logout">Log out</a></p>
         </footer>
     </div>
 

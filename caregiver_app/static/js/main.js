@@ -126,14 +126,16 @@ function escapeHtml(str){ if(!str) return ''; try{const div=document.createEleme
 // Dark mode
 function initDarkMode(){
     const toggle=document.getElementById('darkModeToggle');
+    const label=document.getElementById('darkModeLabel');
+    const setLabel=(text)=>{ if(label) label.textContent=text; else if(toggle) toggle.textContent=text; };
     const stored=localStorage.getItem('caregiver_darkMode');
-    if(stored==='dark'){ document.documentElement.setAttribute('data-theme','dark'); if(toggle) toggle.textContent='☀️ Light';}
-    else { document.documentElement.removeAttribute('data-theme'); if(toggle) toggle.textContent='🌙 Dark';}
+    if(stored==='dark'){ document.documentElement.setAttribute('data-theme','dark'); setLabel('Light');}
+    else { document.documentElement.removeAttribute('data-theme'); setLabel('Dark');}
     if(toggle){
         toggle.addEventListener('click', ()=>{
             const cur=document.documentElement.getAttribute('data-theme');
-            if(cur==='dark'){ document.documentElement.removeAttribute('data-theme'); localStorage.setItem('caregiver_darkMode','light'); toggle.textContent='🌙 Dark';}
-            else { document.documentElement.setAttribute('data-theme','dark'); localStorage.setItem('caregiver_darkMode','dark'); toggle.textContent='☀️ Light';}
+            if(cur==='dark'){ document.documentElement.removeAttribute('data-theme'); localStorage.setItem('caregiver_darkMode','light'); setLabel('Dark');}
+            else { document.documentElement.setAttribute('data-theme','dark'); localStorage.setItem('caregiver_darkMode','dark'); setLabel('Light');}
         });
     }
 }
@@ -158,10 +160,10 @@ async function loadPatients(){
         showToast('Failed to load patients','error');
     }
 }
-function flagForLang(lang){
-    if(lang==='kn-IN') return '🇮🇳';
-    if(lang==='hi-IN') return '🇮🇳';
-    return '🇬🇧';
+function langLabel(lang){
+    if(lang==='kn-IN') return 'KN';
+    if(lang==='hi-IN') return 'HI';
+    return 'EN';
 }
 function renderPatientSelector(){
     const sel=document.getElementById('patientSelector');
@@ -177,12 +179,12 @@ function renderPatientSelector(){
         const active = p.id===activePatientId ? 'active' : '';
         const isActive = p.id===activePatientId;
         const styleActive = isActive ? 'background:var(--green); color:white; border-color:var(--green-dark); box-shadow:0 2px 8px rgba(76,175,80,0.3);' : 'background:white;';
-        html+=`<div class="patient-card" data-patient-id="${p.id}" style="position:relative; border:1px solid var(--gray-300); border-radius:10px; overflow:hidden;">
-            <button class="patient-btn ${isActive?'btn-primary':'btn-outline'} btn" data-patient-id="${p.id}" style="min-height:48px; flex-direction:column; padding:10px 34px 10px 10px; width:100%; ${styleActive} text-align:left; align-items:flex-start; line-height:1.2;" aria-pressed="${isActive}">
-                <span style="font-weight:700; font-size:1rem;">${flagForLang(p.language)} ${escapeHtml(p.name)}</span>
-                <span style="font-size:0.80rem; opacity:0.8;">${escapeHtml(p.username)} • ${escapeHtml(p.language)}</span>
+        html+=`<div class="patient-card" data-patient-id="${p.id}">
+            <button class="patient-btn ${isActive?'active':''}" data-patient-id="${p.id}" aria-pressed="${isActive}">
+                <span class="patient-name">${escapeHtml(p.name)} <span class="badge badge-info" style="font-size:0.62rem; padding:2px 7px; vertical-align:1px;">${langLabel(p.language)}</span></span>
+                <span class="patient-meta">${escapeHtml(p.username)}</span>
             </button>
-            <button type="button" class="delete-patient-btn" data-patient-id="${p.id}" data-patient-name="${escapeHtml(p.name)}" title="Delete patient" aria-label="Delete ${escapeHtml(p.name)}" style="position:absolute; top:6px; right:6px; width:30px; height:30px; border:none; border-radius:6px; background:transparent; color:var(--red, #d32f2f); cursor:pointer; font-size:0.95rem; line-height:1;">🗑️</button>
+            <button type="button" class="delete-patient-btn" data-patient-id="${p.id}" data-patient-name="${escapeHtml(p.name)}" title="Delete patient" aria-label="Delete ${escapeHtml(p.name)}"><svg class="icon" viewBox="0 0 24 24" style="width:1em;height:1em;"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path></svg></button>
         </div>`;
     });
     sel.innerHTML=html;
@@ -239,7 +241,7 @@ async function deletePatient(pid, pname){
     try{
         showLoading('Deleting patient...');
         await apiFetch(`/api/patients/${pid}`, {method:'DELETE'});
-        showToast(`🗑️ ${pname} deleted`,'success');
+        showToast(`${pname} was deleted`,'success');
         if(activePatientId===pid) activePatientId=null;
         await loadPatients();
     }catch(err){
@@ -252,18 +254,20 @@ async function deletePatient(pid, pname){
 // Add Patient (caregiver-only) — new credentials work on the patient website (:5001)
 function initAddPatient(){
     const toggleBtn=document.getElementById('toggleAddPatientBtn');
+    const toggleLabel=document.getElementById('toggleAddPatientLabel');
+    const setToggleLabel=(text)=>{ if(toggleLabel) toggleLabel.textContent=text; else if(toggleBtn) toggleBtn.textContent=text; };
     const form=document.getElementById('addPatientForm');
     const cancelBtn=document.getElementById('cancelAddPatientBtn');
     if(!toggleBtn||!form) return;
     const open=()=>{
         form.style.display='block';
         toggleBtn.setAttribute('aria-expanded','true');
-        toggleBtn.textContent='➖ Hide Add Patient Form';
+        setToggleLabel('Hide the form');
     };
     const close=()=>{
         form.style.display='none';
         toggleBtn.setAttribute('aria-expanded','false');
-        toggleBtn.textContent='➕ Add New Patient';
+        setToggleLabel('Add a new patient');
     };
     toggleBtn.addEventListener('click', ()=>{
         if(form.style.display==='block') close(); else open();
@@ -284,7 +288,7 @@ function initAddPatient(){
                 method:'POST',
                 body: JSON.stringify({username, password, name, language})
             });
-            showToast(`✅ Patient ${name} created — they can log in on port 5001 with "${username}"`,'success');
+            showToast(`${name} was added — they can log in on the patient site as "${username}"`,'success');
             form.reset();
             close();
             await loadPatients();
@@ -396,7 +400,7 @@ function initUpload(){
             extractedMedicines = shuffled.slice(0,count).map(m=>({...m}));
             renderExtractedList();
             ocrResults.style.display='block';
-            showToast(`🔍 Extracted ${count} medicines (Mock OCR)`,'success');
+            showToast(`Found ${count} medicine${count===1?'':'s'} in the prescription`,'success');
             // Save thumbnail for history later
         }, 1200);
     });
@@ -431,7 +435,7 @@ function initUpload(){
             await apiFetch('/api/uploads', {method:'POST', body: JSON.stringify({patient_id:activePatientId, filename: currentPreviewFile ? currentPreviewFile.name : 'prescription.jpg', extracted_medicines: extractedMedicines, thumbnail: thumb})});
         }catch(e){ console.warn('upload history save failed',e); }
         hideLoading();
-        showToast(`➕ Added ${added} medicines for ${activePatient.name}`,'success');
+        showToast(`Added ${added} medicine${added===1?'':'s'} for ${activePatient.name}`,'success');
         // Clear preview
         currentPreviewFile=null;
         fileInput.value='';
@@ -492,7 +496,7 @@ function renderUploadHistory(){
         const medsText = meds.map(m=>m.name).join(', ') || 'No meds';
         const date = item.upload_date || item.date || '';
         html+=`<div class="upload-history-item">
-            ${thumb?`<img src="${thumb}" class="upload-history-thumb" alt="thumb">`:`<div class="upload-history-thumb" style="display:flex;align-items:center;justify-content:center;">📄</div>`}
+            ${thumb?`<img src="${thumb}" class="upload-history-thumb" alt="thumb">`:`<div class="upload-history-thumb" style="display:flex;align-items:center;justify-content:center;"><svg class="icon" viewBox="0 0 24 24" style="width:1.1em;height:1.1em;"><path d="M6 3h9l5 5v13H6z"></path><path d="M15 3v5h5"></path></svg></div>`}
             <div class="upload-history-info">
                 <strong>${escapeHtml(item.filename)}</strong>
                 <small>${escapeHtml(date)}</small>
@@ -526,7 +530,7 @@ function initAddMedicine(){
         for(const t of times){ if(!/^\d{2}:\d{2}$/.test(t)){ showToast(`Invalid time ${t}`,'error'); return; } }
         try{
             await apiFetch('/api/medicines', {method:'POST', body: JSON.stringify({patient_id:activePatientId, name, dosage, times, language})});
-            showToast(`➕ Added ${name} for ${activePatient.name}`,'success');
+            showToast(`Added ${name} for ${activePatient.name}`,'success');
             form.reset();
             document.getElementById('medicineTime').value='08:00';
             await reloadActivePatientData();
@@ -576,12 +580,12 @@ function renderSchedule(){
     const nextText=document.getElementById('nextDoseText');
     const nextRel=document.getElementById('nextDoseRelative');
     const titleEl=document.getElementById('scheduleTitle');
-    if(titleEl) titleEl.textContent=`📅 Today's Schedule (${activePatient?activePatient.name:'No patient'})`;
+    if(titleEl) titleEl.textContent=`Today's schedule (${activePatient?activePatient.name:'No patient'})`;
     if(!container) return;
     updateTodayDate();
     if(!activePatientId || !medicines){
-        container.innerHTML=`<div class="empty-state"><div class="empty-icon">👤</div><h3>Select a patient</h3><p>Choose a patient above to view schedule.</p></div>`;
-        if(doseCountEl) doseCountEl.textContent='0 Doses';
+        container.innerHTML=`<div class="empty-state"><div class="empty-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg></div><h3>Select a patient</h3><p>Choose a patient above to view their schedule.</p></div>`;
+        if(doseCountEl) doseCountEl.textContent='0 doses';
         if(nextText) nextText.textContent='Select a patient';
         return;
     }
@@ -599,7 +603,7 @@ function renderSchedule(){
         btn.setAttribute('aria-pressed', btn.dataset.filter===currentFilter ? 'true':'false');
     });
     if(medicines.length===0){
-        container.innerHTML=`<div class="empty-state"><div class="empty-icon">💊</div><h3>No medicines scheduled</h3><p>Add a medicine for ${escapeHtml(activePatient.name)} to get started.</p></div>`;
+        container.innerHTML=`<div class="empty-state"><div class="empty-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="4"></rect><path d="M12 10v8"></path></svg></div><h3>No medicines here yet</h3><p>Add a medicine for ${escapeHtml(activePatient.name)} to get started.</p></div>`;
         if(nextText) nextText.textContent='No doses scheduled';
         if(nextRel) nextRel.textContent='';
         updateTimeline();
@@ -613,7 +617,7 @@ function renderSchedule(){
     const filteredMeds=getFilteredMeds(currentFilter);
     if(filteredMeds.length===0){
         const label=currentFilter.charAt(0).toUpperCase()+currentFilter.slice(1);
-        container.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No ${label} doses</h3><p>No medicines match "${label}" filter.</p><button class="btn btn-outline btn-sm" onclick="setFilter('today')" style="margin-top:10px;">Show Today</button></div>`;
+        container.innerHTML=`<div class="empty-state"><div class="empty-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg></div><h3>No ${label.toLowerCase()} doses</h3><p>Nothing matches the "${label}" filter right now.</p><button class="btn btn-outline btn-sm" onclick="setFilter('today')" style="margin-top:10px;">Show today</button></div>`;
         updateTimeline();
         return;
     }
@@ -634,7 +638,7 @@ function renderSchedule(){
             let overdue=null;
             medicines.forEach(med=>med.times.forEach(t=>{ if(getStatus(med,t)==='missed' && !overdue) overdue={med,time:t}; }));
             if(overdue){ nextText.textContent=`Overdue: ${overdue.med.name} at ${formatTime(overdue.time)}`; if(nextRel){ nextRel.textContent=getRelativeTime(overdue.time); nextRel.className='relative-time overdue'; } }
-            else if(medicines.every(m=>m.times.every(t=>getStatus(m,t)==='taken'))){ nextText.textContent='All doses taken today! 🎉'; if(nextRel){ nextRel.textContent='Great job'; nextRel.className='relative-time now'; } }
+            else if(medicines.every(m=>m.times.every(t=>getStatus(m,t)==='taken'))){ nextText.textContent='All doses taken today — well done'; if(nextRel){ nextRel.textContent='Great job'; nextRel.className='relative-time now'; } }
             else { nextText.textContent='No pending doses'; if(nextRel) nextRel.textContent=''; }
         }
     }
@@ -647,7 +651,7 @@ function renderSchedule(){
 
     // Render grouped
     const groupsOrder=['morning','afternoon','evening','night'];
-    const groupLabels={morning:'🌅 Morning (6:00 - 11:59)', afternoon:'☀️ Afternoon (12:00 - 16:59)', evening:'🌇 Evening (17:00 - 20:59)', night:'🌙 Night (21:00 - 5:59)'};
+    const groupLabels={morning:'Morning (6:00 – 11:59)', afternoon:'Afternoon (12:00 – 16:59)', evening:'Evening (17:00 – 20:59)', night:'Night (21:00 – 5:59)'};
     const grouped={morning:[], afternoon:[], evening:[], night:[]};
     const medsSorted=[...filteredMeds].sort((a,b)=>timeToMinutes(a.times[0])-timeToMinutes(b.times[0]));
     medsSorted.forEach(med=>{
@@ -665,14 +669,14 @@ function renderSchedule(){
                 return true;
             }).map(t=>{
                 const status=getStatus(med,t);
-                let badgeClass='status-pending-badge', badgeText='● Pending', relClass='upcoming';
-                if(status==='taken'){ badgeClass='status-taken-badge'; badgeText='✓ Taken'; relClass='now';}
-                else if(status==='missed'){ badgeClass='status-missed-badge'; badgeText='✕ Missed'; relClass='overdue';}
+                let badgeClass='status-pending-badge', badgeText='Pending', relClass='upcoming';
+                if(status==='taken'){ badgeClass='status-taken-badge'; badgeText='Taken'; relClass='now';}
+                else if(status==='missed'){ badgeClass='status-missed-badge'; badgeText='Missed'; relClass='overdue';}
                 const rel=getRelativeTime(t);
                 let btn='';
-                if(status==='pending') btn=`<button class="confirm-btn btn btn-success btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">✅ Mark Taken</button>`;
-                else if(status==='taken') btn=`<button class="confirm-btn" disabled style="opacity:0.5; padding:6px 14px; border-radius:20px; background:var(--green); color:white; border:none;">✓ Completed</button>`;
-                else btn=`<button class="confirm-btn btn btn-warning btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">✅ Mark Late</button>`;
+                if(status==='pending') btn=`<button class="confirm-btn btn btn-success btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">Mark taken</button>`;
+                else if(status==='taken') btn=`<button class="confirm-btn" disabled style="opacity:0.5; padding:6px 14px; border-radius:20px; background:var(--green); color:white; border:none;">Completed</button>`;
+                else btn=`<button class="confirm-btn btn btn-warning btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">Mark as taken</button>`;
                 const isDue=isDueNow(med,t);
                 return `<div class="dose-row" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);gap:8px;flex-wrap:wrap;">
                     <span style="font-weight:600; ${isDue?'color:var(--blue);font-weight:800;':''}">${formatTime(t)} <small>(${t})</small></span>
@@ -685,23 +689,23 @@ function renderSchedule(){
                 if(currentFilter==='pending'||currentFilter==='taken'||currentFilter==='missed') return getStatus(med,t)===currentFilter;
                 return true;
             }).map(t=>getStatus(med,t));
-            let overallClass='status-pending', overallBadge='<span class="status-badge status-pending-badge">● Pending</span>';
-            if(statuses.every(s=>s==='taken') && statuses.length>0){ overallClass='status-taken'; overallBadge='<span class="status-badge status-taken-badge">✓ Taken</span>';}
-            else if(statuses.some(s=>s==='missed')){ overallClass='status-missed'; overallBadge='<span class="status-badge status-missed-badge">✕ Missed</span>';}
+            let overallClass='status-pending', overallBadge='<span class="status-badge status-pending-badge">Pending</span>';
+            if(statuses.every(s=>s==='taken') && statuses.length>0){ overallClass='status-taken'; overallBadge='<span class="status-badge status-taken-badge">Taken</span>';}
+            else if(statuses.some(s=>s==='missed')){ overallClass='status-missed'; overallBadge='<span class="status-badge status-missed-badge">Missed</span>';}
             const hasDue=med.times.some(t=>isDueNow(med,t));
             html+=`<div class="medicine-card ${overallClass}" data-id="${med.id}">
                 <div class="medicine-card-top">
                     <div class="medicine-info">
                         <h3>${escapeHtml(med.name)} ${hasDue?'<span class="current-time-highlight">Due Now</span>':''}</h3>
                         <p class="medicine-dosage">${escapeHtml(med.dosage)} • ${med.times.map(formatTime).join(', ')}</p>
-                        <span class="medicine-lang">🔊 ${escapeHtml(med.language)}</span>
+                        <span class="medicine-lang"><svg class="icon" style="width:0.85em;height:0.85em;" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"></path></svg> ${escapeHtml(med.language)}</span>
                     </div>
                     ${overallBadge}
                 </div>
                 <div style="margin:8px 0;">${timeRows}</div>
                 <div class="medicine-card-actions">
-                    <button class="delete-btn" data-id="${med.id}" style="min-height:44px;">🗑️ Delete</button>
-                    <button class="btn btn-outline btn-sm edit-btn" data-id="${med.id}" style="min-height:44px;">✏️ Edit</button>
+                    <button class="delete-btn" data-id="${med.id}" style="min-height:44px;">Delete</button>
+                    <button class="btn btn-outline btn-sm edit-btn" data-id="${med.id}" style="min-height:44px;">Edit</button>
                 </div>
             </div>`;
         });
@@ -721,7 +725,7 @@ function renderSchedule(){
             if(!confirm('Delete this medicine?')) return;
             try{
                 await apiFetch(`/api/medicines/${id}?patient_id=${activePatientId}`, {method:'DELETE'});
-                showToast('🗑️ Deleted','success');
+                showToast('Medicine removed','success');
                 await reloadActivePatientData();
             }catch(err){ showToast(err.message,'error'); }
         });
@@ -740,7 +744,7 @@ function renderSchedule(){
             const newTimes=newTimesStr.split(',').map(s=>s.trim()).filter(Boolean);
             const newLang=prompt('Language (en-US/hi-IN/kn-IN):', med.language) || med.language;
             apiFetch(`/api/medicines/${id}`, {method:'PUT', body: JSON.stringify({patient_id:activePatientId, name:newName, dosage:newDosage, times:newTimes, language:newLang})})
-                .then(()=>{ showToast('✏️ Updated','success'); reloadActivePatientData(); })
+                .then(()=>{ showToast('Medicine updated','success'); reloadActivePatientData(); })
                 .catch(err=>showToast(err.message,'error'));
         });
     });
@@ -754,7 +758,7 @@ function setFilter(filter){
 }
 function renderCompliance(){
     const title=document.getElementById('complianceTitle');
-    if(title) title.textContent=`📊 Compliance (${activePatient?activePatient.name:'No patient'})`;
+    if(title) title.textContent=`Compliance (${activePatient?activePatient.name:'No patient'})`;
     if(!stats || !activePatientId){
         document.getElementById('statTaken').textContent='0';
         document.getElementById('statPending').textContent='0';
@@ -780,7 +784,7 @@ function renderCompliance(){
 function renderHistory(){
     const container=document.getElementById('historyList');
     const title=document.getElementById('historyTitle');
-    if(title) title.textContent=`📜 Dose History (${activePatient?activePatient.name:'No patient'})`;
+    if(title) title.textContent=`Dose history (${activePatient?activePatient.name:'No patient'})`;
     if(!container) return;
     if(!activePatientId || medicines.length===0){
         container.innerHTML=`<div class="empty-state" style="padding:20px;"><p>No history yet</p></div>`;
@@ -812,7 +816,7 @@ async function confirmDose(medicineId, time){
     if(!activePatientId) return;
     try{
         await apiFetch('/api/doses/confirm', {method:'POST', body: JSON.stringify({patient_id:activePatientId, medicine_id:medicineId, time})});
-        showToast(`✅ Marked taken at ${formatTime(time)}`,'success');
+        showToast(`Marked as taken at ${formatTime(time)}`,'success');
         await reloadActivePatientData();
     }catch(e){ showToast(e.message,'error'); }
 }
@@ -829,7 +833,7 @@ function initQuickActions(){
             try{ await apiFetch('/api/doses/confirm', {method:'POST', body: JSON.stringify({patient_id:activePatientId, medicine_id:p.med.id, time:p.time})}); }catch(e){ console.warn(e); }
         }
         hideLoading();
-        showToast(`✅ Marked ${pending.length} doses as taken`,'success');
+        showToast(`Marked ${pending.length} dose${pending.length===1?'':'s'} as taken`,'success');
         await reloadActivePatientData();
     });
     document.getElementById('quickSpeakAllBtn').addEventListener('click', ()=>{
@@ -844,13 +848,13 @@ function initQuickActions(){
     document.getElementById('quickStatsBtn').addEventListener('click', async ()=>{
         if(!activePatientId){ showToast('Select patient','error'); return; }
         await reloadActivePatientData();
-        showToast('📊 Stats refreshed','success');
+        showToast('Stats refreshed','success');
     });
     document.getElementById('loadDemoBtn').addEventListener('click', async ()=>{
         if(!activePatientId){ showToast('Select patient','error'); return; }
         try{
             await apiFetch('/api/demo/load', {method:'POST', body: JSON.stringify({patient_id:activePatientId})});
-            showToast('🚀 Demo loaded','success');
+            showToast('Demo data loaded','success');
             await reloadActivePatientData();
         }catch(e){ showToast(e.message,'error'); }
     });
@@ -859,7 +863,7 @@ function initQuickActions(){
         if(!confirm(`Reset all data for ${activePatient.name}?`)) return;
         try{
             await apiFetch('/api/demo/reset', {method:'POST', body: JSON.stringify({patient_id:activePatientId})});
-            showToast('🔄 Reset complete','success');
+            showToast('Demo data reset','success');
             await reloadActivePatientData();
         }catch(e){ showToast(e.message,'error'); }
     });
@@ -923,7 +927,7 @@ function speakAllPending(pendingList){
     const first=texts.shift();
     speakQueue=texts;
     speak(first.text, first.lang);
-    showToast(`🔊 Speaking ${pendingList.length} reminders for ${activePatient.name}`,'info');
+    showToast(`Speaking ${pendingList.length} reminders for ${activePatient.name}`,'info');
 }
 
 // Voice Agent
@@ -940,7 +944,7 @@ function initVoiceAgent(){
     // check support
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){
-        if(statusEl) statusEl.textContent='⚠️ Not supported (Chrome only)';
+        if(statusEl) statusEl.textContent='Not supported in this browser (try Chrome)';
         if(startBtn) startBtn.disabled=true;
     } else {
         recognition=new SR();
@@ -949,7 +953,7 @@ function initVoiceAgent(){
         recognition.lang='en-US'; // will adapt per patient later
         recognition.onstart=()=>{
             isListening=true;
-            if(statusEl) statusEl.textContent='🔴 Listening...';
+            if(statusEl) statusEl.textContent='Listening...';
             if(startBtn) startBtn.disabled=true;
             if(stopBtn) stopBtn.disabled=false;
             document.querySelector('.voice-agent-container')?.classList.add('listening');
@@ -993,7 +997,7 @@ function initVoiceAgent(){
             }
             // set language per patient
             try{ recognition.lang = activePatient?activePatient.language:'en-US'; }catch(e){}
-            if(transEl) transEl.textContent='👂 Listening...';
+            if(transEl) transEl.textContent='Listening...';
             try{ recognition.start(); }catch(e){ showToast(e.message,'error'); }
         });
     }
@@ -1101,10 +1105,10 @@ function updateVoiceAgentForPatient(){
     // update example buttons text
     document.querySelectorAll('.voice-example-btn').forEach(btn=>{
         const qtype=btn.getAttribute('data-question');
-        if(qtype==='morning') btn.textContent=`🌅 Did ${activePatient?activePatient.name:'Amma'} take morning?`;
-        else if(qtype==='next') btn.textContent=`⏰ Next dose?`;
-        else if(qtype==='missed') btn.textContent=`❌ Missed any?`;
-        else if(qtype==='summary') btn.textContent=`📊 Summary?`;
+        if(qtype==='morning') btn.textContent=`Did ${activePatient?activePatient.name:'Amma'} take morning medicine?`;
+        else if(qtype==='next') btn.textContent=`Next dose?`;
+        else if(qtype==='missed') btn.textContent=`Missed any?`;
+        else if(qtype==='summary') btn.textContent=`Summary?`;
     });
 }
 

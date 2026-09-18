@@ -15,9 +15,9 @@ const REMINDER_TEMPLATES = {
 };
 
 const GREETINGS = {
-    'en-US': '👋 Namaste',
-    'kn-IN': '👋 ನಮಸ್ಕಾರ',
-    'hi-IN': '👋 नमस्ते'
+    'en-US': 'Good day',
+    'kn-IN': 'ನಮಸ್ಕಾರ',
+    'hi-IN': 'नमस्ते'
 };
 
 // Helper: toast
@@ -201,13 +201,15 @@ function updateGreeting(){
 // Dark mode
 function initDarkMode(){
     const toggle = document.getElementById('darkModeToggle');
+    const label = document.getElementById('darkModeLabel');
+    const setLabel = (text) => { if(label) label.textContent = text; else if(toggle) toggle.textContent = text; };
     const stored = localStorage.getItem('patient_darkMode');
     if(stored==='dark'){
         document.documentElement.setAttribute('data-theme','dark');
-        if(toggle) toggle.textContent='☀️ Light';
+        setLabel('Light');
     } else {
         document.documentElement.removeAttribute('data-theme');
-        if(toggle) toggle.textContent='🌙 Dark';
+        setLabel('Dark');
     }
     if(toggle){
         toggle.addEventListener('click', ()=>{
@@ -215,11 +217,11 @@ function initDarkMode(){
             if(cur==='dark'){
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('patient_darkMode','light');
-                toggle.textContent='🌙 Dark';
+                setLabel('Dark');
             } else {
                 document.documentElement.setAttribute('data-theme','dark');
                 localStorage.setItem('patient_darkMode','dark');
-                toggle.textContent='☀️ Light';
+                setLabel('Light');
             }
         });
     }
@@ -254,11 +256,11 @@ function updateVoiceStatus(){
     const el = document.getElementById('voiceStatus');
     if(!el) return;
     if(voices.length===0){
-        el.textContent='⚠️ No voices found';
+        el.textContent='No voices found yet';
         el.className='error';
         el.style.color='var(--red-dark)';
     } else {
-        el.textContent = `✅ ${voices.length} voices ready`;
+        el.textContent = `${voices.length} voices ready`;
         el.className='ready';
         el.style.color='var(--green-dark)';
     }
@@ -420,7 +422,7 @@ function renderLEDs(){
             else if(status==='missed'){ cls='led-missed'; txt='Missed'; color='text-red';}
             else if(due){ cls='led-due-now'; txt='Due Now'; color='text-yellow';}
             const rel=getRelativeTime(t);
-            html+=`<div class="led-item"><div class="led-circle ${cls}" title="${med.name} ${t} ${txt}"></div><span class="led-label">${escapeHtml(med.name)}<br><small>${formatTime(t)} • ${rel}</small></span><span class="led-status ${color}">${txt}${due?' ⚡':''}</span></div>`;
+            html+=`<div class="led-item"><div class="led-circle ${cls}" title="${med.name} ${t} ${txt}"></div><span class="led-label">${escapeHtml(med.name)}<br><small>${formatTime(t)} • ${rel}</small></span><span class="led-status ${color}">${txt}</span></div>`;
         });
     });
     container.innerHTML = html;
@@ -464,12 +466,12 @@ function updateBuzzer(){
     // Check if muted UI
     if(buzzerMuted){
         visual.className='buzzer-visual buzzer-muted';
-        label.textContent='🔇 Muted';
-        if(sub) sub.textContent='Buzzer muted - tap Unmute to enable';
-        if(muteBtn) muteBtn.textContent='🔊 Unmute';
+        label.textContent='Muted';
+        if(sub) sub.textContent='Buzzer muted — tap Unmute to enable';
+        if(muteBtn) muteBtn.textContent='Unmute';
         return;
     } else {
-        if(muteBtn) muteBtn.textContent='🔇 Mute';
+        if(muteBtn) muteBtn.textContent='Mute';
     }
 
     let hasPending = false;
@@ -486,8 +488,8 @@ function updateBuzzer(){
 
     if(hasDueNow){
         visual.className='buzzer-visual buzzer-active buzzer-overdue';
-        label.textContent='Due Now - Buzzing!';
-        if(sub) sub.textContent='Medicine due now! 🔔 Beeping 880Hz';
+        label.textContent='Due now — buzzing';
+        if(sub) sub.textContent='Medicine is due right now';
         // auto beep? We will beep when updating if dueNow (but not spam). Use throttled?
         // For demo, beep once per update if dueNow and not muted - but we already call updateBuzzer each render which is frequent. So beep here would spam.
         // We'll not auto-beep continuously; only on Test or when newly due. For spec: on load if due-now -> buzzer-overdue fast pulse + beep 880Hz
@@ -500,13 +502,13 @@ function updateBuzzer(){
         }
     } else if(hasPending){
         visual.className='buzzer-visual buzzer-active';
-        label.textContent='Buzzing - Reminder Active';
-        if(sub) sub.textContent='Pending doses exist • Beep 440Hz';
+        label.textContent='Reminder active';
+        if(sub) sub.textContent='A dose is coming up soon';
         // maybe soft beep on pending? Not required. Just visual pulse.
     } else {
         visual.className='buzzer-visual';
-        label.textContent='Idle - No Reminder';
-        if(sub) sub.textContent='No pending doses • Quiet';
+        label.textContent='Idle — no reminder';
+        if(sub) sub.textContent='Sounds while doses are pending';
     }
 }
 
@@ -514,7 +516,7 @@ function toggleMute(){
     buzzerMuted = !buzzerMuted;
     localStorage.setItem('patient_buzzerMuted', buzzerMuted?'true':'false');
     updateBuzzer();
-    showToast(buzzerMuted?'🔇 Buzzer muted':'🔊 Buzzer unmuted', 'info');
+    showToast(buzzerMuted?'Buzzer muted':'Buzzer unmuted', 'info');
 }
 
 // Schedule rendering
@@ -541,7 +543,7 @@ function renderSchedule(){
     if(todayLabel){
         const now = new Date();
         const display = now.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
-        todayLabel.textContent = `📅 Today, ${display}`;
+        todayLabel.textContent = `Today, ${display}`;
     }
 
     const totalDoses = medicines.reduce((sum,m)=>sum+m.times.length,0);
@@ -552,7 +554,7 @@ function renderSchedule(){
         if(empty) empty.style.display='block';
         if(nextText) nextText.textContent='No doses scheduled';
         if(nextRel){ nextRel.textContent=''; nextRel.className='relative-time';}
-        document.title = '💊 My Medicines';
+        document.title = 'My Medicines';
         return;
     }
     if(empty) empty.style.display='none';
@@ -560,10 +562,10 @@ function renderSchedule(){
     // Build grouped structure
     const groupsOrder=['morning','afternoon','evening','night'];
     const groupLabels={
-        morning:'🌅 Morning (6:00 - 11:59)',
-        afternoon:'☀️ Afternoon (12:00 - 16:59)',
-        evening:'🌇 Evening (17:00 - 20:59)',
-        night:'🌙 Night (21:00 - 5:59)'
+        morning:'Morning (6:00 – 11:59)',
+        afternoon:'Afternoon (12:00 – 16:59)',
+        evening:'Evening (17:00 – 20:59)',
+        night:'Night (21:00 – 5:59)'
     };
     const grouped={morning:[], afternoon:[], evening:[], night:[]};
     // We need per-medicine cards grouped by earliest time
@@ -611,7 +613,7 @@ function renderSchedule(){
                 if(nextRel){ nextRel.textContent=getRelativeTime(overdue.time); nextRel.className='relative-time overdue';}
             }
         } else if(totalDoses>0 && pendingCount===0 && missedCount===0){
-            nextText.textContent='All doses taken today! 🎉';
+            nextText.textContent='All doses taken today — well done';
             if(nextRel){ nextRel.textContent='Great job'; nextRel.className='relative-time now';}
         } else {
             nextText.textContent='No pending doses';
@@ -620,11 +622,11 @@ function renderSchedule(){
     }
     // Title badge
     if(pendingCount>0){
-        document.title=`💊 (${pendingCount}) My Medicines`;
+        document.title=`(${pendingCount}) My Medicines`;
     } else if(missedCount>0){
-        document.title=`⚠️ (${missedCount} missed) My Medicines`;
+        document.title=`(${missedCount} missed) My Medicines`;
     } else {
-        document.title='💊 My Medicines';
+        document.title='My Medicines';
     }
 
     groupsOrder.forEach(group=>{
@@ -635,9 +637,9 @@ function renderSchedule(){
             // Build per time row
             const timeRows = med.times.map(t=>{
                 const status=getStatus(med,t);
-                let badgeClass='status-pending-badge', badgeText='● Pending', cardStatus='status-pending', relClass='upcoming';
-                if(status==='taken'){ badgeClass='status-taken-badge'; badgeText='✓ Taken'; cardStatus='status-taken'; relClass='now';}
-                else if(status==='missed'){ badgeClass='status-missed-badge'; badgeText='✕ Missed'; cardStatus='status-missed'; relClass='overdue';}
+                let badgeClass='status-pending-badge', badgeText='Pending', cardStatus='status-pending', relClass='upcoming';
+                if(status==='taken'){ badgeClass='status-taken-badge'; badgeText='Taken'; cardStatus='status-taken'; relClass='now';}
+                else if(status==='missed'){ badgeClass='status-missed-badge'; badgeText='Missed'; cardStatus='status-missed'; relClass='overdue';}
                 else {
                     const diff=timeToMinutes(t)-nowMin;
                     if(diff>=0 && diff<=5) relClass='now';
@@ -646,11 +648,11 @@ function renderSchedule(){
                 const rel=getRelativeTime(t);
                 let btn='';
                 if(status==='pending'){
-                    btn=`<button class="confirm-btn btn btn-success btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px; font-size:0.95rem; font-weight:700;">✅ I took it</button>`;
+                    btn=`<button class="confirm-btn btn btn-success btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px; font-size:0.95rem; font-weight:700;">I took it</button>`;
                 } else if(status==='taken'){
-                    btn=`<button class="confirm-btn" disabled style="opacity:0.6; padding:6px 14px; border-radius:20px; background:var(--green); color:white; border:none; font-weight:600;">✓ Completed</button>`;
+                    btn=`<button class="confirm-btn" disabled style="opacity:0.6; padding:6px 14px; border-radius:20px; background:var(--green); color:white; border:none; font-weight:600;">Completed</button>`;
                 } else {
-                    btn=`<button class="confirm-btn btn btn-warning btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">✅ Mark Late as Taken</button>`;
+                    btn=`<button class="confirm-btn btn btn-warning btn-sm" data-id="${med.id}" data-time="${t}" style="min-height:48px;">Mark as taken</button>`;
                 }
                 const isDue = isDueNow(med,t);
                 const timeStyle = isDue ? ' style="color:var(--blue);font-weight:800;"' : '';
@@ -664,9 +666,9 @@ function renderSchedule(){
 
             const visibleTimes = med.times;
             const statuses = visibleTimes.map(t=>getStatus(med,t));
-            let overallClass='status-pending', overallBadge='<span class="status-badge status-pending-badge">● Pending</span>';
-            if(statuses.every(s=>s==='taken')){ overallClass='status-taken'; overallBadge='<span class="status-badge status-taken-badge">✓ Taken</span>';}
-            else if(statuses.some(s=>s==='missed')){ overallClass='status-missed'; overallBadge='<span class="status-badge status-missed-badge">✕ Missed</span>';}
+            let overallClass='status-pending', overallBadge='<span class="status-badge status-pending-badge">Pending</span>';
+            if(statuses.every(s=>s==='taken')){ overallClass='status-taken'; overallBadge='<span class="status-badge status-taken-badge">Taken</span>';}
+            else if(statuses.some(s=>s==='missed')){ overallClass='status-missed'; overallBadge='<span class="status-badge status-missed-badge">Missed</span>';}
             const hasDue = visibleTimes.some(t=>isDueNow(med,t));
 
             html+=`<div class="medicine-card ${overallClass}" data-id="${med.id}" ${hasDue?'style="border-left-width:6px; box-shadow:0 4px 12px rgba(33,150,243,0.15);"':''}>
@@ -674,7 +676,7 @@ function renderSchedule(){
                     <div class="medicine-info">
                         <h3 style="font-size:1.25rem;">${escapeHtml(med.name)} ${hasDue?'<span class="current-time-highlight">Due Now</span>':''}</h3>
                         <p class="medicine-dosage" style="font-size:1rem;">${escapeHtml(med.dosage)} • ${visibleTimes.map(formatTime).join(', ')}</p>
-                        <span class="medicine-lang">🔊 ${escapeHtml(med.language)}</span>
+                        <span class="medicine-lang"><svg class="icon" style="width:0.85em;height:0.85em;" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"></path></svg> ${escapeHtml(med.language)}</span>
                     </div>
                     ${overallBadge}
                 </div>
@@ -699,7 +701,7 @@ async function confirmDose(medicineId, time){
     try{
         showLoading('Confirming...');
         await apiFetch('/api/doses/confirm', {method:'POST', body: JSON.stringify({medicine_id: medicineId, time})});
-        showToast(`✅ Marked as taken at ${formatTime(time)}`, 'success');
+        showToast(`Marked as taken at ${formatTime(time)}`, 'success');
         // Update local state
         const med = medicines.find(m=>m.id===medicineId);
         if(med && med.takenToday) med.takenToday[time]=true;
@@ -894,19 +896,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
             const first=texts.shift();
             speakQueue=texts;
             speak(first.text, first.lang);
-            showToast(`🔊 Speaking ${pending.length} reminders`, 'info');
+            showToast(`Speaking ${pending.length} reminders`, 'info');
         });
     }
     const stopBtn=document.getElementById('stopBtn');
     if(stopBtn) stopBtn.addEventListener('click', ()=>{
         stopSpeaking();
-        showToast('⏹️ Stopped', 'info');
+        showToast('Stopped', 'info');
     });
 
     // Buzzer buttons
     const buzzerTestBtn=document.getElementById('buzzerTestBtn');
     if(buzzerTestBtn) buzzerTestBtn.addEventListener('click', ()=>{
-        if(buzzerMuted){ showToast('🔇 Buzzer muted', 'info'); return; }
+        if(buzzerMuted){ showToast('Buzzer is muted', 'info'); return; }
         const hasDue = medicines.some(m=>m.times.some(t=>isDueNow(m,t)));
         playBeep(hasDue?880:440, 300);
         const visual=document.getElementById('buzzerVisual');
@@ -914,7 +916,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
             visual.classList.add('buzzer-vibrate');
             setTimeout(()=>visual.classList.remove('buzzer-vibrate'), 400);
         }
-        showToast(hasDue?'🔔 Beep 880Hz (Due Now)':'🔔 Beep 440Hz', 'info');
+        showToast(hasDue?'Beeping — due now':'Beeping', 'info');
     });
     const buzzerStopBtn=document.getElementById('buzzerStopBtn');
     if(buzzerStopBtn) buzzerStopBtn.addEventListener('click', ()=>{
@@ -922,9 +924,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
         const visual=document.getElementById('buzzerVisual');
         if(visual){
             visual.className='buzzer-visual';
-            document.getElementById('buzzerLabel').textContent='Idle - Stopped';
+            document.getElementById('buzzerLabel').textContent='Idle — stopped';
         }
-        showToast('🔕 Buzzer stopped', 'info');
+        showToast('Buzzer stopped', 'info');
     });
     const buzzerMuteBtn=document.getElementById('buzzerMuteBtn');
     if(buzzerMuteBtn) buzzerMuteBtn.addEventListener('click', toggleMute);
@@ -950,18 +952,18 @@ document.addEventListener('DOMContentLoaded', async ()=>{
         const ind=document.getElementById('offlineIndicator');
         if(ind) ind.style.display='none';
         const badge=document.getElementById('offlineBadge');
-        if(badge){ badge.textContent='● Online'; badge.className='badge badge-success';}
+        if(badge){ badge.textContent='Online'; badge.className='badge badge-success';}
         updateApiStatus(true);
-        showToast('📡 Back online', 'success');
+        showToast('Back online', 'success');
         loadData(false);
     });
     window.addEventListener('offline', ()=>{
         const ind=document.getElementById('offlineIndicator');
         if(ind) ind.style.display='block';
         const badge=document.getElementById('offlineBadge');
-        if(badge){ badge.textContent='● Offline'; badge.className='badge badge-danger';}
+        if(badge){ badge.textContent='Offline'; badge.className='badge badge-danger';}
         updateApiStatus(false);
-        showToast('📡 Offline - using cache', 'info');
+        showToast('Offline — showing your last saved schedule', 'info');
     });
 
     // Update time-sensitive UI every 30s (status may change Pending->Missed)
