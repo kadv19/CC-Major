@@ -174,8 +174,26 @@ medication_reminder/
 │   └── static/css/style.css, static/js/main.js
 ├── caregiver_app/
 │   ├── app.py             # :5002, caregiver session, patient selector, CRUD, OCR, voice agent
+│   ├── database.py          # serverless copy (sync via scripts/sync_shared.sh)
+│   ├── requirements.txt     # duplicate for Vercel (read relative to root dir)
+│   ├── vercel.json          # @vercel/python build for app.py
 │   ├── templates/login.html
 │   ├── templates/index.html
 │   └── static/css/style.css, static/js/main.js
 └── README.md
 ```
+
+## Deploy to Vercel (two projects, one repo)
+
+Each app folder is **self-contained** (own `database.py`, `requirements.txt`, `vercel.json`), so Vercel builds a clean function with no files outside the root directory. Because `vercel.json` defines the build, Vercel's "include files outside root directory" setting is **ignored** — that's the whole reason for the copies.
+
+1. **Patient project** → import this repo → Root Directory = `patient_app` → deploy.
+2. **Caregiver project** → import this repo → Root Directory = `caregiver_app` → deploy.
+
+After changing shared code in `database.py`, re-copy it into the app folders:
+
+```bash
+./scripts/sync_shared.sh
+```
+
+> Demo caveat: Vercel runs each site as an ephemeral serverless function with a read-only filesystem. `database.py` auto-falls back to a writable temp dir, so the app *runs*, but data is per-instance and **not shared/persistent** between the patient and caregiver sites. For real deployments use a host with a persistent disk (Render, Railway, a VPS).
