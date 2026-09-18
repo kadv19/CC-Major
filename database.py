@@ -13,12 +13,38 @@ import sqlite3
 import json
 import re
 import os
+import tempfile
 from datetime import datetime, date
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Database file path - next to this module
-DB_PATH = os.path.join(os.path.dirname(__file__), "medication.db")
+
+def _resolve_db_path():
+    """Pick a writable SQLite location.
+
+    Precedence:
+      1. MEDREMIND_DB env var (explicit override, e.g. /tmp/medication.db on Vercel)
+      2. Next to this module (normal local dev)
+      3. Fall back to the system temp dir if that location is read-only
+         (serverless platforms mount the project read-only, so writing fails there)
+    """
+    env = os.environ.get("MEDREMIND_DB")
+    if env:
+        if os.path.isabs(env) or os.path.basename(env):
+            return env
+    default = os.path.join(os.path.dirname(os.path.abspath(__file__)), "medication.db")
+    try:
+        probe = default + ".wtest"
+        with open(probe, "w") as fh:
+            fh.write("x")
+        os.remove(probe)
+        return default
+    except (OSError, PermissionError):
+        return os.path.join(tempfile.gettempdir(), "medication.db")
+
+
+# Database file path
+DB_PATH = _resolve_db_path()
 
 
 def get_db_connection():
@@ -34,8 +60,11 @@ def init_db():
     """Creates tables if they do not exist. Idempotent. Enables WAL."""
     conn = get_db_connection()
     try:
-        # Enable WAL mode
-        conn.execute("PRAGMA journal_mode=WAL")
+        # Enable WAL mode (best-effort; some serverless filesystems don't support it)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error:
+            pass
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS users (

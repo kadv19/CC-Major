@@ -1,0 +1,12 @@
+# Medication Reminder System - Python Dependencies
+# Phase 0: Project Setup
+# All core features work offline - no cloud API keys required
+
+# Flask web framework (backend server)
+Flask==3.0.0
+
+# Flask-CORS for handling cross-origin requests (needed for frontend-backend integration in Phase 7+)
+Flask-Cors==4.0.0
+
+# Note: sqlite3 is built-in with Python 3 - no pip install needed
+# Note: Web Speech API & Tesseract.js are browser-based (client-side) - no pip package needed
