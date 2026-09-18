@@ -197,3 +197,27 @@ After changing shared code in `database.py`, re-copy it into the app folders:
 ```
 
 > Demo caveat: Vercel runs each site as an ephemeral serverless function with a read-only filesystem. `database.py` auto-falls back to a writable temp dir, so the app *runs*, but data is per-instance and **not shared/persistent** between the patient and caregiver sites. For real deployments use a host with a persistent disk (Render, Railway, a VPS).
+
+## Voice agent (SLM)
+
+The caregiver Voice agent answers through a **real small language model** when one is reachable, and otherwise falls back to the built-in rule matcher — so it still works offline with zero config.
+
+Resolution order on the server (`POST /api/voice-agent`):
+1. `MEDREMIND_SLM_URL` set → hosted **OpenAI-compatible** `/chat/completions` endpoint (needs `MEDREMIND_SLM_API_KEY`)
+2. otherwise → **local Ollama** at `http://localhost:11434` (`/api/generate`)
+
+Env vars:
+
+| Var | Meaning | Default |
+|---|---|---|
+| `MEDREMIND_SLM_URL` | full endpoint URL | `http://localhost:11434/api/generate` |
+| `MEDREMIND_SLM_API_KEY` | Bearer key for hosted endpoints | *(none)* |
+| `MEDREMIND_SLM_MODEL` | model name | `llama3.2` |
+
+Local example (Ollama, use a model you have pulled):
+
+```bash
+MEDREMIND_SLM_MODEL=qwen2.5:7b .venv/bin/python caregiver_app/app.py
+```
+
+On Vercel, set the three vars to a hosted provider (Groq tier is fast, ~1-2 s). If unset/unreachable, the endpoint answers from the rules and the UI is unchanged.

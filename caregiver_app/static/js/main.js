@@ -970,10 +970,10 @@ function initVoiceAgent(){
             if(statusEl) statusEl.textContent='Error';
             isListening=false;
         };
-        recognition.onresult=(e)=>{
+        recognition.onresult=async (e)=>{
             const transcript=e.results[0][0].transcript;
             if(transEl) transEl.textContent=transcript;
-            const answer=generateVoiceAnswer(transcript);
+            const answer=await getVoiceAnswer(transcript);
             if(respEl) respEl.textContent=answer;
             // speak answer in patient's language
             const lang = activePatient?activePatient.language:'en-US';
@@ -988,10 +988,11 @@ function initVoiceAgent(){
                 const q=prompt('Enter your question:','What is due next?');
                 if(q){
                     if(transEl) transEl.textContent=q;
-                    const ans=generateVoiceAnswer(q);
-                    if(respEl) respEl.textContent=ans;
-                    const lang=activePatient?activePatient.language:'en-US';
-                    speak(ans, lang);
+                    getVoiceAnswer(q).then(ans=>{
+                        if(respEl) respEl.textContent=ans;
+                        const lang=activePatient?activePatient.language:'en-US';
+                        speak(ans, lang);
+                    });
                 }
                 return;
             }
@@ -1008,7 +1009,7 @@ function initVoiceAgent(){
         });
     }
     examples.forEach(btn=>{
-        btn.addEventListener('click', ()=>{
+        btn.addEventListener('click', async ()=>{
             const qtype=btn.getAttribute('data-question');
             let query='';
             // map to example questions as per spec
@@ -1018,7 +1019,7 @@ function initVoiceAgent(){
             else if(qtype==='summary') query=`Summary for today for ${activePatient?activePatient.name:'patient'}?`;
             else query=qtype;
             if(transEl) transEl.textContent=query;
-            const ans=generateVoiceAnswer(query);
+            const ans=await getVoiceAnswer(query);
             if(respEl) respEl.textContent=ans;
             const lang=activePatient?activePatient.language:'en-US';
             speak(ans, lang);
@@ -1094,6 +1095,24 @@ function generateVoiceAnswer(transcript){
     // Ensure name mentioned
     if(!answer.includes(name)) answer=`${name}: `+answer;
     return answer;
+}
+async function getVoiceAnswer(transcript){
+    const fallback=()=>generateVoiceAnswer(transcript);
+    if(!activePatientId) return 'Please select a patient first.';
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(), 15000);
+    try{
+        const r=await fetch('/api/voice-agent', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({text: transcript, patient_id: activePatientId}),
+            signal: ctrl.signal
+        });
+        const data=await r.json();
+        if(data && data.answer && data.source!=='rule') return data.answer;
+    }catch(e){ /* SLM unreachable/offline -> rule matcher below */ }
+    finally{ clearTimeout(timer); }
+    return fallback();
 }
 function updateVoiceAgentForPatient(){
     const nameEl=document.getElementById('voicePatientName');
